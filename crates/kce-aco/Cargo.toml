@@ -1,0 +1,16 @@
+[package]
+name = "kce-aco"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Ant Colony Optimization — pheromone routing, evaporation, exploration"
+
+[dependencies]
+kce-core = { workspace = true }
+kce-graph = { workspace = true }
+parking_lot = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+
+[lints]
+workspace = true

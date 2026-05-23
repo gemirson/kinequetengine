@@ -1,0 +1,21 @@
+[package]
+name = "kce-mcp"
+version = "6.0.0"
+edition = "2021"
+
+[[bin]]
+name = "kce-mcp-server"
+path = "src/main.rs"
+
+[dependencies]
+kce-core = { workspace = true }
+kce-retrieval = { workspace = true }
+kce-pipeline = { workspace = true }
+kce-ais = { workspace = true }
+kce-metrics = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,11 @@
+/target/
+Cargo.lock
+*.pdb
+*.swp
+*.swo
+*~
+.env
+/data/
+.agents/
+.openclaude/
+*.pdf

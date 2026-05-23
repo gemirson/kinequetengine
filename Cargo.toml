@@ -1,0 +1,101 @@
+[package]
+name = "kce"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "KineContext Engine root — workspace host and benchmarks"
+
+[workspace]
+resolver = "2"
+members = [
+    ".",
+    "crates/kce-core",
+    "crates/kce-storage",
+    "crates/kce-metrics",
+    "crates/kce-retrieval",
+    "crates/kce-graph",
+    "crates/kce-ecma",
+    "crates/kce-mce",
+    "crates/kce-aco",
+    "crates/kce-ais",
+    "crates/kce-pipeline",
+    "crates/kce-api",
+    "crates/kce-server",
+    "crates/kce-python",
+    "crates/kce-mcp",
+]
+
+[workspace.package]
+version = "6.0.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/kinecontext/kce"
+
+[workspace.dependencies]
+# Internal crates
+kce-core = { path = "crates/kce-core" }
+kce-storage = { path = "crates/kce-storage" }
+kce-metrics = { path = "crates/kce-metrics" }
+kce-retrieval = { path = "crates/kce-retrieval" }
+kce-graph = { path = "crates/kce-graph" }
+kce-ecma = { path = "crates/kce-ecma" }
+kce-mce = { path = "crates/kce-mce" }
+kce-aco = { path = "crates/kce-aco" }
+kce-ais = { path = "crates/kce-ais" }
+kce-pipeline = { path = "crates/kce-pipeline" }
+kce-api = { path = "crates/kce-api" }
+
+# External crates
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+parking_lot = "0.12"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "limit"] }
+utoipa = { version = "4", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
+crc32fast = "1"
+memmap2 = "0.9"
+uuid = { version = "1", features = ["v4"] }
+rayon = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[dependencies]
+kce-core = { workspace = true }
+kce-metrics = { workspace = true }
+kce-retrieval = { workspace = true }
+kce-pipeline = { workspace = true }
+kce-aco = { workspace = true }
+kce-graph = { workspace = true }
+kce-ecma = { workspace = true }
+kce-mce = { workspace = true }
+kce-ais = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "pipeline_bench"
+harness = false
+
+[[bench]]
+name = "metrics_bench"
+harness = false
+
+[lints]
+workspace = true
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "deny"
+todo = "warn"
+dbg_macro = "deny"

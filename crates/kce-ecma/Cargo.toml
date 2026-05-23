@@ -1,0 +1,18 @@
+[package]
+name = "kce-ecma"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Embryological Cognitive Memory Architecture — node lifecycle evolution"
+
+[dependencies]
+kce-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+kce-mce = { workspace = true }
+kce-storage = { workspace = true }
+
+[lints]
+workspace = true

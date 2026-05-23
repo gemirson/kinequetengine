@@ -1,0 +1,15 @@
+[package]
+name = "kce-ais"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Artificial Immune System — anomaly detection, antigen memory, regulation"
+
+[dependencies]
+kce-core = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

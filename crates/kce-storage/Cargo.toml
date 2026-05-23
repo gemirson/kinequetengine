@@ -1,0 +1,18 @@
+[package]
+name = "kce-storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "KineSQL embedded storage engine with WAL, pages, and mmap"
+
+[dependencies]
+kce-core = { workspace = true }
+crc32fast = { workspace = true }
+memmap2 = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

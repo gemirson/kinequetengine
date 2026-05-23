@@ -1,0 +1,16 @@
+[package]
+name = "kce-retrieval"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Hybrid retrieval engine (cosine SIMD + prime GCD)"
+
+[dependencies]
+kce-core = { workspace = true }
+kce-metrics = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rayon = { workspace = true }
+
+[lints]
+workspace = true
