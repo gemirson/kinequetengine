@@ -296,8 +296,15 @@ async fn query_handler(
 ///
 /// Actually checks WAL and DB status rather than returning hardcoded values.
 async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    // WAL check: attempt to read from pipeline to verify it's functional.
-    let wal_ok = {
+    // Storage check: verify if we can perform a dummy read/write
+    let mut storage_ok = false;
+    if let Some(ref storage_arc) = state.pipeline.storage {
+        let mut storage = storage_arc.write();
+        storage_ok = storage.read(b"healthcheck:probe").is_ok();
+    }
+
+    // Pipeline check: verify basic execution
+    let pipeline_ok = {
         let test_ctx = ContextInput {
             query_vector: vec![1.0, 0.0],
             top_k: 1,
@@ -307,18 +314,13 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
         state.pipeline.execute(&test_ctx).is_ok()
     };
 
-    // DB check: verify the pipeline can read the dataset.
-    let db_ok = wal_ok; // In this architecture, dataset is in-memory alongside pipeline.
-
     // Latency check: verify latest latency is under budget.
-    let latency_ms = state
-        .metric_query_latency_ms
-        .load(Ordering::Relaxed);
+    let latency_ms = state.metric_query_latency_ms.load(Ordering::Relaxed);
     let latency_ok = latency_ms < state.pipeline.config().timeout_ms;
 
-    let status = if wal_ok && db_ok && latency_ok {
+    let status = if storage_ok && pipeline_ok && latency_ok {
         HealthStatus::Healthy
-    } else if db_ok {
+    } else if storage_ok || pipeline_ok {
         HealthStatus::Degraded
     } else {
         HealthStatus::Unhealthy
@@ -326,8 +328,8 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
 
     let report = HealthReport {
         status,
-        wal_ok,
-        db_ok,
+        wal_ok: storage_ok,
+        db_ok: storage_ok,
         latency_ok,
         version: env!("CARGO_PKG_VERSION").to_string(),
         uptime_seconds: state.start_time.elapsed().as_secs(),

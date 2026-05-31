@@ -23,6 +23,8 @@ members = [
     "crates/kce-server",
     "crates/kce-python",
     "crates/kce-mcp",
+    "crates/kce-swarm",
+    "crates/kce-gateway",
 ]
 
 [workspace.package]
@@ -45,6 +47,8 @@ kce-aco = { path = "crates/kce-aco" }
 kce-ais = { path = "crates/kce-ais" }
 kce-pipeline = { path = "crates/kce-pipeline" }
 kce-api = { path = "crates/kce-api" }
+kce-swarm = { path = "crates/kce-swarm" }
+kce-gateway = { path = "crates/kce-gateway" }
 
 # External crates
 serde = { version = "1", features = ["derive"] }
@@ -61,9 +65,15 @@ utoipa = { version = "4", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "7", features = ["axum"] }
 crc32fast = "1"
 memmap2 = "0.9"
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 rayon = "1"
 criterion = { version = "0.5", features = ["html_reports"] }
+tonic = "0.10"
+prost = "0.12"
+tokio-tungstenite = "0.20"
+bytes = "1"
+tokio-stream = "0.1"
+futures-util = "0.3"
 
 [dependencies]
 kce-core = { workspace = true }

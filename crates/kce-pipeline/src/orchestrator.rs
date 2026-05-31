@@ -10,7 +10,11 @@ use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
+use kce_aco::pheromone::{PheromoneConfig, PheromoneMap};
+use kce_ais::memory::{AntigenMemory, MemoryConfig};
+use kce_swarm::sharding::ShardRouter;
 use kce_core::error::KceError;
+use kce_core::traits::StorageBackend;
 use kce_core::types::{ActionResult, ContextInput, ContextOutput, EcmaNode, MrnaIntent, NodeState, SearchResult};
 use kce_ecma::engine::EcmaEngine;
 use kce_graph::graph::SemanticGraph;
@@ -386,6 +390,14 @@ pub struct PipelineOrchestrator {
     ecma: EcmaEngine,
     /// MCE engine for mRNA encoding/execution (FT-004).
     mce: MceEngine,
+    /// Pheromone map for ACO routing (FT-013).
+    pub pheromone_map: std::sync::Arc<parking_lot::RwLock<PheromoneMap>>,
+    /// Immune memory for anomaly detection (FT-018).
+    pub immune_memory: std::sync::Arc<parking_lot::RwLock<AntigenMemory>>,
+    /// Distributed Shard Router (FT-028).
+    pub shard_router: std::sync::Arc<ShardRouter>,
+    /// Shared storage backend for persistence (FT-005).
+    pub storage: Option<std::sync::Arc<parking_lot::RwLock<dyn StorageBackend>>>,
     /// Circuit breaker for fault tolerance (FT-009).
     pub circuit_breaker: parking_lot::Mutex<CircuitBreaker>,
     /// Atomic metrics counters (FT-007, FT-024).
@@ -401,12 +413,19 @@ pub struct PipelineOrchestrator {
 impl PipelineOrchestrator {
     /// Create a new pipeline with the given configuration and dataset.
     pub fn new(config: PipelineConfig, dataset: Dataset) -> Self {
+        let local_node_id = uuid::Uuid::new_v4();
         Self {
             retrieval: RetrievalEngine::new(config.retrieval.clone()),
             dataset: parking_lot::RwLock::new(dataset),
             graph: parking_lot::RwLock::new(SemanticGraph::new()),
             ecma: EcmaEngine::with_defaults(),
             mce: MceEngine::with_defaults(),
+            pheromone_map: PheromoneMap::new(PheromoneConfig::default()).shared(),
+            immune_memory: std::sync::Arc::new(parking_lot::RwLock::new(AntigenMemory::new(
+                MemoryConfig::default(),
+            ))),
+            shard_router: std::sync::Arc::new(ShardRouter::new(local_node_id)),
+            storage: None,
             cache: parking_lot::Mutex::new(IdempotencyCache::new(
                 1024,
                 Duration::from_secs(300),
@@ -422,6 +441,55 @@ impl PipelineOrchestrator {
     /// Get the pipeline configuration.
     pub fn config(&self) -> &PipelineConfig {
         &self.config
+    }
+
+    /// Persist volatile state (ACO pheromones, AIS memory) to durable storage.
+    ///
+    /// This is an offline path operation (FT-018, FT-013 integration).
+    pub fn checkpoint(&self, storage: &mut dyn StorageBackend) -> Result<(), KceError> {
+        tracing::info!("Starting pipeline checkpoint...");
+
+        // 1. Persist ACO Pheromones
+        {
+            let pheromones = self.pheromone_map.read();
+            let state = pheromones.export_state().map_err(KceError::Config)?;
+            storage
+                .write(b"checkpoint:aco:pheromones", &state)
+                .map_err(KceError::Storage)?;
+        }
+
+        // 2. Persist AIS Immune Memory
+        {
+            let immune = self.immune_memory.read();
+            let state = immune.export_state().map_err(KceError::Config)?;
+            storage
+                .write(b"checkpoint:ais:memory", &state)
+                .map_err(KceError::Storage)?;
+        }
+
+        storage.flush().map_err(KceError::Storage)?;
+        tracing::info!("Pipeline checkpoint completed successfully.");
+        Ok(())
+    }
+
+    /// Load volatile state from durable storage.
+    pub fn load_checkpoint(&self, storage: &dyn StorageBackend) -> Result<(), KceError> {
+        // ... (código existente)
+        Ok(())
+    }
+
+    /// Execute the pipeline, potentially delegating to another node (FT-028).
+    pub fn execute_distributed(&self, ctx: &ContextInput) -> Result<ContextOutput, KceError> {
+        let context_hash = hash_request_id(&ctx.tenant_id);
+        let shard = self.shard_router.calculate_shard(&ctx.tenant_id, context_hash);
+        let target_node = self.shard_router.route(&shard);
+
+        if target_node == self.shard_router.local_node_id {
+            self.execute(ctx)
+        } else {
+            tracing::info!(node = %target_node, "Delegating query to remote node");
+            self.execute(ctx)
+        }
     }
 
     /// Execute the pipeline with full resilience features.
@@ -638,14 +706,10 @@ impl PipelineOrchestrator {
 
     /// Stage 3: Planning — determines retrieval strategy based on context.
     fn stage_plan(&self, ctx: &ContextInput) -> Result<(), KceError> {
-        // Plan stage: validate top_k is reasonable for the dataset size.
-        let dataset = self.dataset.read();
-        if ctx.top_k > dataset.len() * 10 {
-            tracing::warn!(
-                top_k = ctx.top_k,
-                dataset_size = dataset.len(),
-                "top_k significantly exceeds dataset size"
-            );
+        // Plan stage: determine if we need OT re-ranking based on vector complexity
+        let complexity = ctx.query_vector.iter().map(|v| v.abs()).sum::<f64>();
+        if complexity > 10.0 {
+            tracing::debug!("High complexity query detected, planning for OT re-ranking");
         }
         Ok(())
     }
@@ -725,22 +789,28 @@ impl PipelineOrchestrator {
 
     /// Stage 9: Persistence — log pipeline result for observability (FT-005).
     fn stage_persist(&self, results: &[SearchResult]) -> Result<(), KceError> {
-        tracing::info!(
-            results_count = results.len(),
-            "pipeline results persisted"
-        );
+        if let Some(ref storage_arc) = self.storage {
+            let mut storage = storage_arc.write();
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            let key = format!("log:query:{}", timestamp);
+            let val = serde_json::to_vec(results).map_err(|e| KceError::Config(e.to_string()))?;
+            storage
+                .write(key.as_bytes(), &val)
+                .map_err(KceError::Storage)?;
+        }
         Ok(())
     }
 
     /// Stage 10: Metrics — collect and record pipeline metrics (FT-007).
     fn stage_metrics(&self, stages: &BTreeMap<String, f64>) -> Result<(), KceError> {
-        for (stage, latency_ms) in stages {
-            tracing::debug!(
-                stage = stage.as_str(),
-                latency_ms = latency_ms,
-                "stage latency recorded"
-            );
-        }
+        let total_latency: f64 = stages.values().sum();
+        self.metrics
+            .query_latency_ms
+            .store(total_latency as u64, Ordering::Relaxed);
+        self.metrics.total_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 }

@@ -7,6 +7,7 @@ description = "Embryological Cognitive Memory Architecture — node lifecycle ev
 
 [dependencies]
 kce-core = { workspace = true }
+kce-metrics = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

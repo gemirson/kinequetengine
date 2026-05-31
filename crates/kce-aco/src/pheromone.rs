@@ -52,6 +52,7 @@ pub struct PheromoneEntry {
 ///
 /// Thread-safe via `Arc<RwLock<PheromoneMap>>`.  Use [`PheromoneMap::shared`]
 /// to obtain a shared handle.
+#[derive(Serialize, Deserialize)]
 pub struct PheromoneMap {
     scores: HashMap<(u64, u64), PheromoneEntry>,
     config: PheromoneConfig,
@@ -69,6 +70,20 @@ impl PheromoneMap {
     /// Wrap in `Arc<RwLock<...>>` for concurrent access.
     pub fn shared(self) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(self))
+    }
+
+    /// Export the entire map to a JSON byte vector for persistence.
+    pub fn export_state(&self) -> Result<Vec<u8>, String> {
+        serde_json::to_vec(self).map_err(|e| format!("serialize error: {e}"))
+    }
+
+    /// Import map state from a JSON byte vector.
+    pub fn import_state(&mut self, state: &[u8]) -> Result<(), String> {
+        let imported: PheromoneMap =
+            serde_json::from_slice(state).map_err(|e| format!("deserialize error: {e}"))?;
+        self.scores = imported.scores;
+        self.config = imported.config;
+        Ok(())
     }
 
     /// Deposit pheromone on an edge (additive, clamped to tau_max).

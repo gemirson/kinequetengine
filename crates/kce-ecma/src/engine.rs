@@ -1,8 +1,9 @@
 //! ECMA Engine — processes context nodes through the lifecycle state machine.
 
 use kce_core::error::KceError;
-use kce_core::traits::StorageBackend;
+use kce_core::traits::{DistanceMetric, StorageBackend};
 use kce_core::types::{ActionFeedback, EcmaNode};
+use kce_metrics::wasserstein::WassersteinMetric;
 
 use crate::state_machine::{self, EcmaConfig};
 
@@ -10,12 +11,23 @@ use crate::state_machine::{self, EcmaConfig};
 #[derive(Debug)]
 pub struct EcmaEngine {
     config: EcmaConfig,
+    wasserstein: WassersteinMetric,
 }
 
 impl EcmaEngine {
     /// Create a new ECMA engine with the given configuration.
     pub fn new(config: EcmaConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            wasserstein: WassersteinMetric::new(),
+        }
+    }
+
+    /// Calculate semantic drift between two context versions using Wasserstein (FT-023).
+    pub fn calculate_drift(&self, old_vec: &[f64], new_vec: &[f64]) -> Result<f64, KceError> {
+        self.wasserstein
+            .compute(old_vec, new_vec)
+            .map_err(|e| KceError::Config(e.to_string()))
     }
 
     /// Create with default configuration.

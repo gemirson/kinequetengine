@@ -2,9 +2,9 @@
 
 **Produto:** KineContext Engine  
 **Versão:** v6.0 (Bio-Inspired Cognitive Engine)  
-**Data:** 2026-05-23  
+**Data:** 2026-05-30  
 **Status:** Draft — Especificações completas para revisão  
-**Total de Features:** 23
+**Total de Features:** 33
 
 ---
 
@@ -25,18 +25,23 @@ Cognitive Data Engine capaz de processar contexto semântico, evoluir conhecimen
 | FT-003 | [ECMA Engine](ft-003-ecma-engine.md) — Evolução cognitiva (Stem→Specialized→Apoptosis) | P0 | `ft-003-ecma-engine.md` |
 | FT-004 | [MCE Engine](ft-004-mce-engine.md) — Contexto → Ação executável (mRNA) | P0 | `ft-004-mce-engine.md` |
 | FT-011 | [Pipeline Robusto](ft-011-pipeline-robusto.md) — Orquestração do pipeline cognitivo | P0 | `ft-011-pipeline-robusto.md` |
+| FT-027 | [ACO-HNSW](ft-027-aco-hnsw.md) — Indexação vetorial otimizada por feromônios | P0 | `ft-027-aco-hnsw.md` |
 
 ### 💾 Storage
 
 | ID | Feature | Prioridade | Arquivo |
 |----|---------|------------|---------|
 | FT-005 | [KineSQL](ft-005-kinesql-storage.md) — Storage engine com WAL, fsync, checksum | P0 | `ft-005-kinesql-storage.md` |
+| FT-032 | [io_uring](ft-032-io-uring.md) — Backend assíncrono bare-metal para KineSQL | P0 | `ft-032-io-uring.md` |
+| FT-033 | [io_uring Zero-Copy Splice](ft-033-io-uring-splice.md) — Transmissão zero-copy disco-rede | P0 | `ft-033-io-uring-splice.md` |
 
 ### 📡 Interface
 
 | ID | Feature | Prioridade | Arquivo |
 |----|---------|------------|---------|
 | FT-006 | [API Gateway](ft-006-api-gateway.md) — REST API Axum com OpenAPI | P0 | `ft-006-api-gateway.md` |
+| FT-025 | [MCP Server](ft-025-mcp-server.md) — Interface Model Context Protocol (JSON-RPC) | P1 | `ft-025-mcp-server.md` |
+| FT-026 | [Python Bindings](ft-026-python-bindings.md) — Extensão nativa PyO3 para Python | P1 | `ft-026-python-bindings.md` |
 
 ### 🔧 Operação
 
@@ -44,6 +49,7 @@ Cognitive Data Engine capaz de processar contexto semântico, evoluir conhecimen
 |----|---------|------------|---------|
 | FT-007 | [Observabilidade](ft-007-observabilidade.md) — Tracing + Métricas Prometheus | P1 | `ft-007-observabilidade.md` |
 | FT-009 | [Resiliência](ft-009-resiliencia.md) — Retry, timeout, circuit breaker, backpressure | P0 | `ft-009-resiliencia.md` |
+| FT-024 | [Latency P99](ft-024-latency-p99.md) — Latência Ultra-baixa P99 (3-10ms) | P0 | `ft-024-latency-p99.md` |
 
 ### 🔐 Segurança
 
@@ -55,7 +61,7 @@ Cognitive Data Engine capaz de processar contexto semântico, evoluir conhecimen
 
 | ID | Feature | Prioridade | Arquivo |
 |----|---------|------------|---------|
-| FT-023 | [Optimal Transport](ft-023-optimal-transport.md) — Wasserstein/Sinkhorn context distance | P0 | `ft-023-optimal-transport.md` |
+| FT-023 | [Optimal Transport](ft-023-optimal-transport.md) — Wasserstein/Sinkhorn distance | P0 | `ft-023-optimal-transport.md` |
 
 ### ⚙️ Infraestrutura
 
@@ -63,6 +69,15 @@ Cognitive Data Engine capaz de processar contexto semântico, evoluir conhecimen
 |----|---------|------------|---------|
 | FT-010 | [Concorrência](ft-010-concorrencia.md) — Thread safety, Arc<RwLock>, idempotência | P0 | `ft-010-concorrencia.md` |
 | FT-012 | [Deploy](ft-012-deploy-infra.md) — Docker, Config 12-factor, Healthcheck | P1 | `ft-012-deploy-infra.md` |
+
+### 🌐 Distributed Swarm
+
+| ID | Feature | Prioridade | Arquivo |
+|----|---------|------------|---------|
+| FT-028 | [Distributed Sharding](ft-028-distributed-sharding.md) — Particionamento dinâmico ACTA | P0 | `ft-028-distributed-sharding.md` |
+| FT-029 | [Swarm Gossip](ft-029-swarm-gossip.md) — Protocolo de sincronização P2P via UDP | P0 | `ft-029-swarm-gossip.md` |
+| FT-030 | [Distributed Consensus](ft-030-distributed-consensus.md) — Consenso Híbrido CRDT + Raft-Lite | P0 | `ft-030-distributed-consensus.md` |
+| FT-031 | [Hematoencephalic Gateway](ft-031-hematoencephalic-gateway.md) — Proxy gRPC-Web e WebSockets | P0 | `ft-031-hematoencephalic-gateway.md` |
 
 ### 🐜 ACO — Ant Colony Optimization
 

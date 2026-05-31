@@ -53,7 +53,7 @@ pub enum Severity {
 }
 
 /// Configuration for antigen memory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryConfig {
     /// Maximum number of antigens to store.
     pub max_entries: usize,
@@ -75,6 +75,7 @@ impl Default for MemoryConfig {
 }
 
 /// Antigen memory store.
+#[derive(Serialize, Deserialize)]
 pub struct AntigenMemory {
     records: HashMap<u64, AntigenRecord>,
     next_id: u64,
@@ -89,6 +90,21 @@ impl AntigenMemory {
             next_id: 1,
             config,
         }
+    }
+
+    /// Export memory state as a JSON byte vector.
+    pub fn export_state(&self) -> Result<Vec<u8>, String> {
+        serde_json::to_vec(self).map_err(|e| format!("serialize error: {e}"))
+    }
+
+    /// Import memory state from a JSON byte vector.
+    pub fn import_state(&mut self, state: &[u8]) -> Result<(), String> {
+        let imported: AntigenMemory =
+            serde_json::from_slice(state).map_err(|e| format!("deserialize error: {e}"))?;
+        self.records = imported.records;
+        self.next_id = imported.next_id;
+        self.config = imported.config;
+        Ok(())
     }
 
     /// Store a new antigen pattern.

@@ -14,6 +14,8 @@ kce-core = { workspace = true }
 kce-api = { workspace = true }
 kce-mce = { workspace = true }
 kce-pipeline = { workspace = true }
+kce-swarm = { workspace = true }
+kce-gateway = { workspace = true }
 kce-retrieval = { workspace = true }
 kce-graph = { workspace = true }
 kce-storage = { workspace = true }

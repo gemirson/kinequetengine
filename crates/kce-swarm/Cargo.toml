@@ -1,26 +1,26 @@
 [package]
-name = "kce-pipeline"
+name = "kce-swarm"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-description = "Pipeline orchestrator — coordinates all KCE engines"
+description = "Swarm protocols — Distributed sharding, Gossip, and Consensus"
 
 [dependencies]
 kce-core = { workspace = true }
-kce-metrics = { workspace = true }
-kce-retrieval = { workspace = true }
-kce-graph = { workspace = true }
-kce-ecma = { workspace = true }
-kce-mce = { workspace = true }
 kce-storage = { workspace = true }
+kce-metrics = { workspace = true }
+kce-graph = { workspace = true }
 kce-aco = { workspace = true }
 kce-ais = { workspace = true }
-kce-swarm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }
 parking_lot = { workspace = true }
-tracing = { workspace = true }
 uuid = { workspace = true }
+crc32fast = { workspace = true }
+bytes = { workspace = true }
+tracing = { workspace = true }
+rand = "0.8"
 
 [lints]
 workspace = true

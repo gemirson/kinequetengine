@@ -27,6 +27,10 @@
 #![deny(clippy::unwrap_used)]
 
 pub mod backend;
+#[allow(unsafe_code)]
+pub mod io_uring_backend;
+#[allow(unsafe_code)]
+pub mod io_uring_splicer;
 pub mod mmap;
 pub mod page;
 pub mod wal;
