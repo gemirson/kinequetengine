@@ -1,47 +1,47 @@
 # FT-033 — io_uring Zero-Copy Splice (Storage-to-Network Bypass)
 
-**Módulo:** Storage / Interface | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-033-IO-URING-SPLICE | **Atualização:** 2026-05-30
+**Module:** Storage / Interface | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-033-IO-URING-SPLICE | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-No tráfego de busca de alto rendimento e sincronização distribuída, o KCE precisa transmitir grandes volumes de dados (páginas do KineSQL, logs do WAL e blocos de vetores) da persistência em disco diretamente para a rede (Gateway e outros nós da malha). O fluxo convencional envolve ler do disco para um buffer de usuário em memória RAM e depois escrever esse buffer no socket de rede, o que consome ciclos de CPU redundantes e satura a largura de banda da memória.
+In high-throughput search traffic and distributed synchronization, KCE needs to stream large volumes of data (KineSQL pages, WAL logs, and vector blocks) from on-disk persistence directly to the network (Gateway and other mesh nodes). Conventional flow involves reading from disk to a user buffer in RAM and then writing that buffer to the network socket, which consumes redundant CPU cycles and saturates memory bandwidth.
 
-Como uma extensão da feature **FT-032 (io_uring Bare-Metal)**, o **io_uring Zero-Copy Splice** utiliza a operação `IORING_OP_SPLICE` do kernel Linux. Esta feature permite conectar diretamente o descritor de arquivo físico (KineSQL) ao descritor de rede (TCP/UDP) dentro do próprio kernel através de um buffer pipe intermediário, transmitindo dados com **cópia zero (Zero-Copy)**. Isso elimina completamente o tráfego de dados no espaço de usuário do KCE e libera a CPU para processar buscas e análises cognitivas.
+As an extension of the **FT-032 (io_uring Bare-Metal)** feature, **io_uring Zero-Copy Splice** uses the Linux kernel's `IORING_OP_SPLICE` operation. This feature allows you to directly connect the physical file descriptor (KineSQL) to the network descriptor (TCP/UDP) within the kernel itself through an intermediate buffer pipe, transmitting data with **zero-copy**. This completely eliminates data traffic in the KCE user space and frees up the CPU to process searches and cognitive analysis.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compilação sem avisos ou erros no ecossistema Rust.
-- [ ] AC-002: Liberação automática de recursos (pipes e sockets do kernel) após a conclusão do splice.
-- [ ] AC-003: Tolerância a perdas de conexão de rede durante a transferência (descarte de frames parcial com erro limpo gRPC/TCP).
+### General
+- [ ] AC-001: Build without warnings or errors in the Rust ecosystem.
+- [ ] AC-002: Automatic release of resources (kernel pipes and sockets) after splice completion.
+- [ ] AC-003: Tolerance of network connection losses during transfer (partial frame discard with gRPC/TCP clean error).
 
-### Específicos
-- [ ] AC-010: Registro integrado no anel `io_uring` de descritores de arquivos de banco de dados (KineSQL) e descritores de conexões de sockets ativos (Gateway gRPC/Gossip UDP).
-- [ ] AC-011: Execução de chamadas `IORING_OP_SPLICE` de forma assíncrona, ligando o arquivo de origem ao descritor de socket por meio de pipes de kernel pré-alocados.
-- [ ] AC-012: Encadeamento de operações: suporte a envio encadeado de cabeçalho gRPC-Web (`write` no anel) seguido do corpo de dados via splice (`splice` no anel) usando `IOSQE_IO_LINK`.
-- [ ] AC-013: Otimização de buffer de kernel: redimensionamento dinâmico do tamanho do buffer de pipe interno (`fcntl` F_SETPIPE_SZ) para suportar blocos de dados de até 1MB sem fragmentação.
-- [ ] AC-014: Mecanismo de **Fallback Transparente**: caso o kernel não suporte a operação `splice` de arquivos específicos ou o SO não seja compatível, reverte para leitura assíncrona em buffer de usuário (`read`) seguida de escrita no socket (`write`) de maneira invisível para a aplicação.
+### Specifics
+- [ ] AC-010: Integrated registration in the `io_uring` ring of database file descriptors (KineSQL) and active socket connection descriptors (GRPC/Gossip UDP Gateway).
+- [ ] AC-011: Executing `IORING_OP_SPLICE` calls asynchronously, linking the source file to the socket descriptor via pre-allocated kernel pipes.
+- [ ] AC-012: Chaining of operations: support chained sending of gRPC-Web header (`write` on the ring) followed by the data body via splice (`splice` on the ring) using `IOSQE_IO_LINK`.
+- [ ] AC-013: Kernel Buffer Optimization: Dynamic resizing of internal pipe buffer size (`fcntl` F_SETPIPE_SZ) to support data blocks up to 1MB without fragmentation.
+- [ ] AC-014: **Transparent Fallback Mechanism**: if the kernel does not support the `splice` operation of specific files or the OS is not compatible, it reverts to asynchronous reading in the user buffer (`read`) followed by writing to the socket (`write`) in an invisible way for the application.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Módulo `IoUringSplicer` implementado e acoplado ao anel principal do `IoUringBackend`.
-- [ ] Pool de buffers de pipe gerenciado de forma segura no espaço de kernel.
-- [ ] Testes de validação de integridade provando que a transmissão via splice envia bytes idênticos aos gravados originalmente.
-- [ ] Benchmarks comparativos sob carga concorrente extrema demonstrando redução superior a 40% no consumo de ciclos de CPU por MB transmitido.
-- [ ] Cobertura de testes unitários superior a 80%.
+- [ ] `IoUringSplicer` module implemented and coupled to the `IoUringBackend` main ring.
+- [ ] Securely managed pipe buffer pool in kernel space.
+- [ ] Integrity validation tests proving that transmission via splice sends bytes identical to those originally recorded.
+- [ ] Comparative benchmarks under extreme concurrent load demonstrating greater than 40% reduction in CPU cycle consumption per MB transmitted.
+- [ ] Unit test coverage greater than 80%.
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Estrutura de Submissão de Splice no Anel (Conceitual em Rust)
+### Ring Splice Submission Structure (Conceptual in Rust)
 
 ```rust
 // Exemplo conceitual de encadeamento de splice para transmitir dados de banco direto para o socket TCP
@@ -80,93 +80,93 @@ pub fn submit_zero_copy_splice(
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Alocação de Pipe | Solicitação de criação de pipe de kernel | Fds válidos de leitura/escrita retornados pelo OS |
-| UT-002 | Splice Linkado | Encadeamento SQE | Execução sequencial dos dois passos de splice no CQE |
-| UT-003 | Erro de Fd Inválido | Fd de destino nulo ou fechado | Retorno de CQE com erro de arquivo inválido sem crash |
-| UT-004 | Redimensionamento de Pipe | Redimensionar pipe para 512KB | Operação de fcntl aceita com sucesso pelo SO |
+| UT-001 | Pipe Allocation | Kernel pipe creation request | Valid read/write data returned by the OS |
+| UT-002 | Linked Splice | SQE chaining | Sequential execution of the two splice steps in CQE |
+| UT-003 | Invalid Fd Error | Null or closed destination FD | CQE return with invalid file error without crash |
+| UT-004 | Pipe Resizing | Resize pipe to 512KB | fcntl operation successfully accepted by OS |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Streaming de Dataset Completo | Transferência de um arquivo vetorial de 100MB diretamente para o socket gRPC sem alocar memória no espaço de usuário do KCE |
-| FT-002 | Recuperação de Buffer Congestionado | Se o socket de rede congestionar, o pipe deve reter a escrita e a CQE do segundo passo deve aguardar sem travar a thread |
+| FT-001 | Full Dataset Streaming | Transferring a 100MB vector file directly to the gRPC socket without allocating memory in KCE user space |
+| FT-002 | Congested Buffer Recovery | If the network socket becomes congested, the pipe must hold the write and the CQE of the second step must wait without blocking the thread |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Splice → Gossip (FT-029) | O motor do Gossip utiliza splice para transferir deltas de grafos pesados entre nós |
-| IT-002 | Splice → Gateway (FT-031) | O Gateway envia respostas de busca contendo vetores brutos via splice direto ao cliente |
+| IT-001 | Splice → Gossip (FT-029) | Gossip engine uses splice to transfer heavy graph deltas between nodes |
+| IT-002 | Splice → Gateway (FT-031) | The Gateway sends search responses containing raw vectors via splice directly to the client |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Roteamento e streaming de dados de banco de altíssima vazão em nós distribuídos do KCE, visando eliminar gargalos de largura de banda de barramento de RAM.
+**Context:** Routing and streaming high-throughput database data across distributed KCE nodes to eliminate RAM bus bandwidth bottlenecks.
 
-**Assumptions:** O kernel Linux suporta a operação de splice entre o sistema de arquivos onde o KineSQL está montado e sockets de rede ativos. O subsistema de rede do host suporta transmissões assíncronas em lote.
+**Assumptions:** The Linux kernel supports splice operation between the file system where KineSQL is mounted and active network sockets. The host network subsystem supports asynchronous batch transmissions.
 
-**Requirements:** R-001: Roteamento direto via `IORING_OP_SPLICE` | R-002: Encadeamento de SQEs | R-003: Fallback gracioso estável.
+**Requirements:** R-001: Direct routing via `IORING_OP_SPLICE` | R-002: Chaining of SQEs | R-003: Stable graceful fallback.
 
-**Evidence:** Execução de testes de estresse de leitura e envio de dados comparando a taxa de vazão (Throughput) e consumo de CPU contra a arquitetura tradicional com buffer de usuário.
+**Evidence:** Running stress tests on reading and sending data comparing throughput and CPU consumption against traditional user-buffered architecture.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Redução de Carga de CPU | Uso de CPU do processo em transmissão pesada | > 35% de redução frente ao fluxo com cópia |
-| Latência de Início de Fluxo | Tempo para submeter o encadeamento no anel | < 0.2ms |
-| Vazão Máxima de Rede | Throughput de transmissão de arquivos de banco | Saturation do limite físico da placa (ex: 10 Gbps) |
+| CPU Load Reduction | Process CPU usage in heavy streaming | > 35% reduction compared to flow with copy |
+| Flow Start Latency | Time to commit thread to ring | < 0.2ms |
+| Maximum Network Flow | Bank file transmission throughput | Saturation of the physical limit of the card (ex: 10 Gbps) |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:**
-- Zero cópias feitas no espaço de usuário do processo do banco durante a transmissão de páginas de dados.
-- Sincronização e integridade dos bytes transferidos em 100% dos testes.
-- Cobertura de testes unitários superior a 80%.
+**Success:**
+- Zero copies made in user space of the database process when transmitting data pages.
+- Synchronization and integrity of transferred bytes in 100% of tests.
+- Unit test coverage greater than 80%.
 
-**Falha (BLOQUEANTE):**
-- Vazamento crônico de file descriptors de pipes alocados no kernel.
-- Corrupção parcial ou desordem de pacotes nos dados transmitidos via splice.
+**Failure (BLOCKING):**
+- Chronic leakage of file descriptors from pipes allocated in the kernel.
+- Partial corruption or packet disorder in data transmitted via splice.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `io-uring` | ^0.6 | Suporte às instruções `Splice` do anel |
-| `libc` | ^0.2 | Chamadas nativas de pipe e dimensionamento |
+| `io-uring` | ^0.6 | Ring `Splice` instruction support |
+| `libc` | ^0.2 | Native pipe and scaling calls |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-033-IO-URING-SPLICE | Esta especificação |
-| Código | `crates/kce-storage/src/io_uring_splicer.rs` | Implementador do splice de kernel |
+| Spec | FT-033-IO-URING-SPLICE | This specification |
+| Code | `crates/kce-storage/src/io_uring_splicer.rs` | Kernel splice implementer |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase 1)
-Implementação de roteador básico via chamada de sistema síncrona `splice` de POSIX para validação conceitual de performance do canal.
+### MVP (Phase 1)
+Basic router implementation via POSIX synchronous `splice` system call for conceptual validation of channel performance.
 
-### Iteração 1 (Fase 2)
-Implementação assíncrona baseada no anel do `io_uring` com encadeamento de submissão do pipeline de duas etapas (File $\rightarrow$ Pipe $\rightarrow$ Socket) e tratamento de erros do CQE.
+### Iteration 1 (Phase 2)
+Ring-based asynchronous implementation of `io_uring` with two-step pipeline submission chaining (File $\rightarrow$ Pipe $\rightarrow$ Socket) and CQE error handling.
 
-### Iteração 2 (Fase 3)
-Pool dinâmico de descritores de pipes persistidos na memória de kernel para reuso instantâneo, auto-ajuste de tamanho de buffer baseado na MTU de rede e integração completa com o gateway gRPC.
+### Iteration 2 (Phase 3)
+Dynamic pooling of pipe descriptors persisted in kernel memory for instant reuse, auto-tuning buffer size based on network MTU, and full integration with the gRPC gateway.

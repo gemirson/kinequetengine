@@ -1,47 +1,47 @@
 # FT-005 — KineSQL (Storage Engine)
 
-**Módulo:** Storage | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-005-KINESQL-STORAGE | **Atualização:** 2026-05-23
+**Module:** Storage | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-005-KINESQL-STORAGE | **Updated:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O KineSQL é o **storage engine embedded** do KCE. Fornece persistência confiável com WAL (Write-Ahead Log) real, paginação, mmap e checksums por página. É o alicerce de confiabilidade: se o KineSQL falha, o sistema todo perde dados. Deve sobreviver a crashes sem corrupção.
+KineSQL is the **embedded storage engine** of the KCE. It provides reliable persistence with real WAL (Write-Ahead Log), paging, mmap, and per-page checksums. It is the foundation of reliability: if KineSQL fails, the entire system loses data. It must survive crashes without corruption.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: WAL persistente em disco (não apenas memória)
-- [ ] AC-011: `fsync` ativo em todas as escritas críticas (WAL + data)
+- [ ] AC-010: Persistent WAL on disk (not just memory)
+- [ ] AC-011: `fsync` active in all critical writes (WAL + data)
 - [ ] AC-012: Atomic commit: WAL → fsync WAL → apply data → fsync data
-- [ ] AC-013: Recovery funcional: replay WAL após crash sem perda
-- [ ] AC-014: Checksum CRC32 por página — detecta corrupção
-- [ ] AC-015: Paginação implementada com tamanho configurável
-- [ ] AC-016: Leitura consistente após restart
-- [ ] AC-017: Suporte a mmap para leitura rápida
-- [ ] AC-018: Concorrência via `Arc<RwLock<KineSQL>>`
+- [ ] AC-013: Functional recovery: WAL replay after crash without loss
+- [ ] AC-014: CRC32 checksum per page — detects corruption
+- [ ] AC-015: Paging implemented with configurable size
+- [ ] AC-016: Consistent reading after restart
+- [ ] AC-017: Support for mmap for fast reading
+- [ ] AC-018: Concurrency via `Arc<RwLock<KineSQL>>`
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] WAL persistente com fsync
-- [ ] Recovery funcional testado com crash simulado
-- [ ] Checksum CRC32 validado por página
-- [ ] Paginação implementada
-- [ ] Atomic commit implementado
-- [ ] Testes de crash/recovery passando
-- [ ] Cobertura ≥ 80%
+- [ ] Persistent WAL with fsync
+- [ ] Functional recovery tested with simulated crash
+- [ ] CRC32 checksum validated per page
+- [ ] Paging implemented
+- [ ] Atomic commit implemented
+- [ ] Crash/recovery tests passing
+- [ ] Coverage ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Escrita + Recovery
+### Write + Recovery
 
-**Operação de escrita:**
+**Write operation:**
 ```json
 {
   "operation": "INSERT",
@@ -50,12 +50,12 @@ O KineSQL é o **storage engine embedded** do KCE. Fornece persistência confiá
 }
 ```
 
-**WAL entry (formato interno):**
+**WAL entry (internal format):**
 ```
 1716500000|INSERT|vectors|{"id":42,"vector":[0.12,0.85,0.33,0.67]}|CRC:0xA3F2B1C4
 ```
 
-**Após crash + recovery:**
+**After crash + recovery:**
 ```json
 {
   "recovery": {
@@ -67,7 +67,7 @@ O KineSQL é o **storage engine embedded** do KCE. Fornece persistência confiá
 }
 ```
 
-### Erro — checksum inválido
+### Error — invalid checksum
 ```json
 {
   "error": "CHECKSUM_FAILURE",
@@ -79,105 +79,105 @@ O KineSQL é o **storage engine embedded** do KCE. Fornece persistência confiá
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Input | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Checksum válido | página com dados | `checksum == expected` |
-| UT-002 | Checksum inválido | página corrompida | `Err(ChecksumFailure)` |
-| UT-003 | WAL append | operação INSERT | entrada no arquivo WAL |
-| UT-004 | WAL replay | arquivo WAL com 10 entries | 10 operações aplicadas |
-| UT-005 | Página cheia → nova página | inserção excede tamanho | nova página alocada |
-| UT-006 | Leitura por ID | `get(42)` | registro correto |
+| UT-001 | Valid checksum | page with data | `checksum == expected` |
+| UT-002 | Invalid checksum | corrupted page | `Err(ChecksumFailure)` |
+| UT-003 | WAL append | INSERT operation | entry in WAL file |
+| UT-004 | WAL replay | WAL file with 10 entries | 10 operations applied |
+| UT-005 | Page full → new page | insertion exceeds size | new page allocated |
+| UT-006 | Read by ID | `get(42)` | correct record |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | WAL corrompida | `Err(WalCorrupted)` com posição do erro |
-| UF-002 | Disco cheio | `Err(DiskFull)` — sem corrupção parcial |
-| UF-003 | Registro inexistente | `Err(NotFound)` |
+| UF-001 | Corrupted WAL | `Err(WalCorrupted)` with error position |
+| UF-002 | Disk full | `Err(DiskFull)` — no partial corruption |
+| UF-003 | Non-existent record | `Err(NotFound)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Insert → kill → restart → read | Dados íntegros após recovery |
-| FT-002 | 10k inserts → checksum all pages | Todos CRC32 válidos |
-| FT-003 | Concurrent reads + writes | Sem corrupção, leituras consistentes |
+| FT-001 | Insert → kill → restart → read | Intact data after recovery |
+| FT-002 | 10k inserts → checksum all pages | All CRC32 valid |
+| FT-003 | Concurrent reads + writes | No corruption, consistent reads |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | KineSQL → Retrieval | Vetores lidos corretamente do storage |
-| IT-002 | KineSQL → Graph | Grafo persiste e restaura |
-| IT-003 | KineSQL → ECMA | Estados dos nós persistem |
+| IT-001 | KineSQL → Retrieval | Vectors read correctly from storage |
+| IT-002 | KineSQL → Graph | Graph persists and restores |
+| IT-003 | KineSQL → ECMA | Node states persist |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Storage engine embedded que é o alicerce de confiabilidade do KCE; deve sobreviver a crashes sem perda/corrupção de dados usando WAL + fsync + checksum.
+**Context:** Embedded storage engine that is the foundation of KCE reliability; must survive crashes without data loss/corruption using WAL + fsync + checksum.
 
-**Assumptions:** Filesystem suporta fsync; disco tem espaço suficiente; WAL é single-writer (write lock); mmap disponível no OS alvo; CRC32 é suficiente para detecção de corrupção (não para segurança criptográfica).
+**Assumptions:** Filesystem supports fsync; disk has enough space; WAL is single-writer (write lock); mmap available on target OS; CRC32 is sufficient for corruption detection (not for cryptographic security).
 
-**Requirements:** R-001: WAL persistente | R-002: fsync em todas escritas | R-003: Atomic commit | R-004: Recovery sem perda | R-005: CRC32 por página | R-006: Paginação | R-007: mmap read.
+**Requirements:** R-001: Persistent WAL | R-002: fsync in all writes | R-003: Atomic commit | R-004: Lossless recovery | R-005: CRC32 per page | R-006: Paging | R-007: mmap read.
 
 **Evidence:** `tests/kinesql_crash_tests.rs` | `tests/kinesql_recovery.rs`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Alvo |
+| Aspect | Target |
 |---------|------|
 | Write latency (fsync) | < 10ms |
 | Read latency (mmap) | < 1ms |
 | Recovery time (1k entries) | < 500ms |
 | Max data size | ≥ 10GB |
-| Durabilidade | 0 perda em crash simulado |
+| Durability | 0 loss in simulated crash |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** 0 perda em crash | CRC32 100% válidos | Recovery automático | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Perda de dados em crash | Corrupção silenciosa | Recovery falha
+**Success:** 0 loss on crash | 100% valid CRC32 | Automatic recovery | Coverage ≥ 80%  
+**Failure (BLOCKING):** Data loss on crash | Silent corruption | Recovery fails
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
 | `crc32fast` | ^1.3 | Checksum |
 | `parking_lot` | ^0.12 | RwLock |
 | `memmap2` | ^0.9 | Memory-mapped I/O |
 
-**OS:** Linux (prod) — fsync garantido | **Filesystem:** ext4, xfs (recomendado)
+**OS:** Linux (prod) — fsync guaranteed | **Filesystem:** ext4, xfs (recommended)
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-005-KINESQL-STORAGE |
-| Código | `src/storage/mod.rs`, `src/storage/wal.rs`, `src/storage/page.rs` |
-| Teste | `tests/kinesql_crash_tests.rs` |
+| Code | `src/storage/mod.rs`, `src/storage/wal.rs`, `src/storage/page.rs` |
+| Test | `tests/kinesql_crash_tests.rs` |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-WAL em disco (append) | Leitura/escrita básica | Checksum CRC32 | 5+ testes unitários
+### MVP (Week 1-2)
+WAL on disk (append) | Basic read/write | CRC32 Checksum | 5+ unit tests
 
-### Iteração 1 (Semana 3-4)
-fsync real | Atomic commit | Recovery (WAL replay) | Paginação | Crash tests
+### Iteration 1 (Week 3-4)
+Real fsync | Atomic commit | Recovery (WAL replay) | Paging | Crash tests
 
-### Iteração 2 (Semana 5-6)
-mmap para leitura | Concorrência RwLock | Integração com todos módulos | Stress test 10k ops | Docs
+### Iteration 2 (Week 5-6)
+mmap for reading | RwLock concurrency | Integration with all modules | 10k ops stress test | Docs

@@ -1,53 +1,53 @@
 # FT-025 — MCP Server (Model Context Protocol)
 
-**Módulo:** Interface | **Versão:** v6.0 | **Prioridade:** P1 — Importante  
-**Artefato ID:** FT-025-MCP-SERVER | **Atualização:** 2026-05-30
+**Module:** Interface | **Version:** v6.0 | **Priority:** P1 — Important  
+**Artifact ID:** FT-025-MCP-SERVER | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O **MCP Server** atua como a interface direta do KCE para agentes de inteligência artificial (como Cursor, Claude Desktop e outros). Ele implementa o protocolo JSON-RPC 2.0 através de comunicação bidirecional por entrada e saída padrão (`stdin`/`stdout`), expondo as capacidades essenciais do KCE como ferramentas automatizadas. Isso permite que LLMs façam buscas vetoriais, calibração de anomalias por IA e cálculos matemáticos de transporte ótimo diretamente sob demanda.
+**MCP Server** acts as KCE's direct interface to artificial intelligence agents (such as Cursor, Claude Desktop, and others). It implements the JSON-RPC 2.0 protocol through standard input and output bidirectional communication (`stdin`/`stdout`), exposing the essential capabilities of KCE as automated tools. This allows LLMs to perform vector searches, AI anomaly calibration, and optimal transport mathematical calculations directly on demand.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compila sem warnings em `--release`
-- [ ] AC-002: Zero alocações redundantes no loop de eventos de E/S
-- [ ] AC-003: Cobertura de documentação pública completa (/// doc comments)
+### General
+- [ ] AC-001: Compiles without warnings in `--release`
+- [ ] AC-002: Zero redundant allocations in the I/O event loop
+- [ ] AC-003: Complete public documentation coverage (/// doc comments)
 
-### Específicos
-- [ ] AC-010: Handshake inicial via chamada de método `initialize` retornando a versão do protocolo (`2024-11-05`) e capacidades do servidor.
-- [ ] AC-011: Listagem dinâmica de ferramentas disponíveis via chamada de método `tools/list` com esquemas JSON válidos.
-- [ ] AC-012: Suporte à execução de ferramentas com o método `tools/call`.
-- [ ] AC-013: Ferramenta `kce_retrieve`: aceita vetor de consulta e conjunto de dados, executando a busca híbrida do KCE.
-- [ ] AC-014: Ferramenta `kce_classify`: aceita vetor e padrões conhecidos de auto-reconhecimento (self), executando o classificador imunológico.
-- [ ] AC-015: Ferramenta `kce_sinkhorn`: computa a distância de transporte ótimo Sinkhorn entre duas distribuições.
-- [ ] AC-016: Ferramenta `kce_regulate`: executa a avaliação e homeostase de rede com métricas de performance do sistema.
-- [ ] AC-017: Respostas em conformidade estrita com a especificação JSON-RPC 2.0 (campos `jsonrpc`, `id`, `result` e `error`).
-- [ ] AC-018: Manipulação segura de strings e tratamento de erros do parser de JSON (evitando panics).
+### Specifics
+- [ ] AC-010: Initial handshake via `initialize` method call returning the protocol version (`2024-11-05`) and server capabilities.
+- [ ] AC-011: Dynamic listing of tools available via `tools/list` method call with valid JSON schemas.
+- [ ] AC-012: Support for running tools with the `tools/call` method.
+- [ ] AC-013: Tool `kce_retrieve`: accepts query vector and dataset, performing KCE hybrid search.
+- [ ] AC-014: Tool `kce_classify`: accepts vector and known self-recognition patterns, running the immunological classifier.
+- [ ] AC-015: Tool `kce_sinkhorn`: computes the optimal Sinkhorn transport distance between two distributions.
+- [ ] AC-016: Tool `kce_regulate`: performs network assessment and homeostasis with system performance metrics.
+- [ ] AC-017: Responses strictly comply with the JSON-RPC 2.0 specification (fields `jsonrpc`, `id`, `result`, and `error`).
+- [ ] AC-018: Safe string manipulation and JSON parser error handling (avoiding panics).
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Parser de JSON-RPC 2.0 validado e robusto
-- [ ] 4 ferramentas core registradas e testadas via mock E/S
-- [ ] Tratamento de erros estruturado para chamadas inválidas e erros internos
-- [ ] Testes unitários de serialização de payloads
-- [ ] Testes funcionais com simulação de interações por linha de comando
-- [ ] Sem chamadas de `unwrap()` em caminhos de execução críticos
-- [ ] Integração completa com o módulo de logs e métricas do KCE
+- [ ] Validated and robust JSON-RPC 2.0 parser
+- [ ] 4 core tools registered and tested via mock I/O
+- [ ] Structured error handling for invalid calls and internal errors
+- [ ] Payload serialization unit tests
+- [ ] Functional tests with simulation of command line interactions
+- [ ] No `unwrap()` calls on critical execution paths
+- [ ] Full integration with KCE logs and metrics module
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Chamada para Executar a Ferramenta de Busca (`kce_retrieve`)
+### Call to Run Search Tool (`kce_retrieve`)
 
-**Entrada (stdin):**
+**Input (stdin):**
 ```json
 {
   "jsonrpc": "2.0",
@@ -67,7 +67,7 @@ O **MCP Server** atua como a interface direta do KCE para agentes de inteligênc
 }
 ```
 
-**Saída (stdout):**
+**Output (stdout):**
 ```json
 {
   "jsonrpc": "2.0",
@@ -85,90 +85,90 @@ O **MCP Server** atua como a interface direta do KCE para agentes de inteligênc
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Handshake inicial | Método `initialize` com ID numérico | Resposta JSON-RPC com infos do servidor |
-| UT-002 | Listagem de ferramentas | Método `tools/list` | JSON listando as 4 ferramentas cadastradas |
-| UT-003 | Método inválido | Método `tools/non_existent` | Código de erro `-32601` (Method not found) |
-| UT-004 | Parser error | Payload de texto corrompido ou JSON inválido | Código de erro `-32700` (Parse error) |
+| UT-001 | Initial handshake | `initialize` method with numeric ID | JSON-RPC response with server information |
+| UT-002 | Tool listing | `tools/list` method | JSON listing the 4 registered tools |
+| UT-003 | Invalid method | `tools/non_existent` method | Error code `-32601` (Method not found) |
+| UT-004 | parser error | Corrupt text payload or invalid JSON | Error code `-32700` (Parse error) |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Execução do loop principal | O servidor roda continuamente lendo linhas da stdin até o fim do fluxo |
-| FT-002 | Teste de similaridade Sinkhorn | Chamada de `kce_sinkhorn` retorna distância computada com sucesso |
-| FT-003 | Execução de Homeostase | Chamada de `kce_regulate` gera ajustes dinâmicos com base nas métricas fornecidas |
+| FT-001 | Main loop execution | The server runs continuously reading lines from stdin until the end of the stream |
+| FT-002 | Sinkhorn similarity test | Call of `kce_sinkhorn` returns successfully computed distance |
+| FT-003 | Executing Homeostasis | Calling `kce_regulate` generates dynamic adjustments based on provided metrics |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | MCP → Kce-Retrieval | O vetor de entrada é mapeado de forma idêntica e busca é executada |
-| IT-002 | MCP → Kce-Ais | Classificação self/non-self retorna o label correto com nível de confiança |
+| IT-001 | MCP → Kce-Retrieval | The input vector is mapped identically and search is performed |
+| IT-002 | MCP → Kce-Ais | Self/non-self classification returns the correct label with confidence level |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Canal de comunicação direta com agentes inteligentes para tornar o KCE acionável por sistemas LLM modernos, estendendo o motor cognitivo para fluxos autônomos.
+**Context:** Direct communication channel with intelligent agents to make KCE actionable by modern LLM systems, extending the cognitive engine to autonomous flows.
 
-**Assumptions:** As entradas e saídas utilizam exclusivamente UTF-8 e JSON sobre os descritores de arquivo padrão (`stdin`/`stdout`). O servidor não tenta gerenciar sessões concorrentes no mesmo canal físico.
+**Assumptions:** Inputs and outputs exclusively use UTF-8 and JSON over standard file descriptors (`stdin`/`stdout`). The server does not attempt to manage concurrent sessions on the same physical channel.
 
-**Requirements:** R-001: conformidade JSON-RPC 2.0 | R-002: conformidade com o Model Context Protocol (MCP) | R-003: exposição de retrieval, classify, sinkhorn e regulation como ferramentas.
+**Requirements:** R-001: JSON-RPC 2.0 compliance | R-002: Model Context Protocol (MCP) compliance | R-003: display of retrieval, classify, sinkhorn and regulation as tools.
 
-**Evidence:** Testes automatizados em `crates/kce-mcp` e integração de ferramentas comprovadas por testes do console.
+**Evidence:** Automated tests on `crates/kce-mcp` and integration of tools proven by console tests.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Latência do Dispatcher | Tempo de parsing e roteamento de mensagens | < 1ms |
-| Pegada de memória | Consumo de RAM básico em idle | < 15MB |
-| Tratamento de erro | Segurança sob dados malformados | Resiliência completa (sem panic) |
+| Dispatcher Latency | Message parsing and routing time | < 1ms |
+| Memory footprint | Basic RAM consumption at idle | < 15MB |
+| Error handling | Security under malformed data | Complete resilience (no panic) |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** Resposta correta do protocolo a todas as mensagens com conformidade estrita (0 erros de parsing no handshake).
+**Success:** Correct protocol response to all messages with strict compliance (0 parsing errors in handshake).
 
-**Falha (BLOQUEANTE):** Queda de conexão abrupta (panic) sob JSON malformado ou interrupção de stdin.
+**Failure (BLOCKING):** Abrupt connection drop (panic) under malformed JSON or stdin interruption.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `serde_json` | ^1.0 | Serialização e desserialização |
-| `kce-retrieval` | Interna | Execução da busca híbrida |
-| `kce-ais` | Interna | Classificação e regulação |
+| `serde_json` | ^1.0 | Serialization and deserialization |
+| `kce-retrieval` | Internal | Executing the hybrid search |
+| `kce-ais` | Internal | Classification and regulation |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-025-MCP-SERVER | Esta especificação |
-| Código | `crates/kce-mcp/src/main.rs` | Implementação do servidor de E/S |
+| Spec | FT-025-MCP-SERVER | This specification |
+| Code | `crates/kce-mcp/src/main.rs` | I/O Server Implementation |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase Atual)
-Interface JSON-RPC 2.0 básica com suporte aos 3 métodos padrão e exposição de retrieval e classify.
+### MVP (Current Phase)
+Basic JSON-RPC 2.0 interface with support for the 3 standard methods and exposure of retrieval and classify.
 
-### Iteração 1
-Integração completa com as métricas do KCE (/metrics) e suporte à execução em tempo real da regulação por homeostase.
+### Iteration 1
+Full integration with KCE metrics (/metrics) and support for real-time execution of homeostasis regulation.
 
-### Iteração 2
-Suporte a canais de transporte adicionais (gRPC-Web / SSE) para conexões Web.
+### Iteration 2
+Support additional transport channels (gRPC-Web / SSE) for Web connections.

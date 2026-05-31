@@ -1,50 +1,50 @@
 # FT-029 — Swarm Gossip Protocol
 
-**Módulo:** Infraestrutura | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-029-SWARM-GOSSIP | **Atualização:** 2026-05-30
+**Module:** Infrastructure | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-029-SWARM-GOSSIP | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-A sincronização de metadados, caminhos de busca otimizados e perfis de ameaças imunológicas em uma rede distribuída não pode depender de conexões TCP caras e persistentes. O **Swarm Gossip Protocol** define um protocolo de comunicação assíncrona peer-to-peer (P2P) de baixo overhead baseado em pacotes binários compactados transmitidos via **UDP**. Ele é responsável por sincronizar feromônios do ACO, atualizações incrementais do grafo cognitivo e propagar assinaturas de ameaças imunológicas (Herd Immunity) a nível de cluster em poucos milissegundos.
+Synchronizing metadata, optimized search paths, and immune threat profiles across a distributed network cannot rely on expensive, persistent TCP connections. **Swarm Gossip Protocol** defines a low-overhead asynchronous peer-to-peer (P2P) communication protocol based on compressed binary packets transmitted via **UDP**. It is responsible for synchronizing ACO pheromones, incremental updates of the cognitive graph and propagating immune threat signatures (Herd Immunity) at the cluster level in a few milliseconds.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compilação limpa sem dependências desnecessárias do sistema operacional.
-- [ ] AC-002: Parsing seguro de pacotes binários (zero buffers overflows, bounds checking explícito).
-- [ ] AC-003: Alocação zero de memória no loop principal de escuta UDP.
+### General
+- [ ] AC-001: Clean build without unnecessary OS dependencies.
+- [ ] AC-002: Secure parsing of binary packets (zero buffer overflows, explicit bounds checking).
+- [ ] AC-003: Zero memory allocation in main UDP listening loop.
 
-### Específicos
-- [ ] AC-010: Formato de pacotes binários estrito, contendo Magic Byte (`0x03`), Node ID (16 bytes), Sequence Number (4 bytes), Message Type (1 byte), Causal Watermark (8 bytes) e Payload variável.
-- [ ] AC-011: Tipos de mensagens suportadas:
-  * `0x01` (Pheromone Sync): propagação de peso de feromônios das arestas.
-  * `0x02` (Antigen Sync): transmissão de assinaturas de ameaças.
-  * `0x03` (Graph Delta Sync): envio de deltas estruturais do grafo.
-- [ ] AC-012: Mecanismo de **Herd Immunity** (Imunidade Coletiva): ao receber um pacote de Antigen Sync, o nó deve atualizar sua memória imunológica imediatamente e filtrar requisições futuras com a assinatura recebida.
-- [ ] AC-013: Tratamento de desordem de pacotes: utilização de Vector Clocks / Watermarks causais para descartar pacotes defasados.
-- [ ] AC-014: Broadcast epidêmico limitado: cada nó repassa a informação recebida para $K$ vizinhos aleatórios (padrão: $K=3$) para evitar tempestades de broadcast (broadcast storms).
+### Specifics
+- [ ] AC-010: Strict binary packet format, containing Magic Byte (`0x03`), Node ID (16 bytes), Sequence Number (4 bytes), Message Type (1 byte), Causal Watermark (8 bytes) and Variable Payload.
+- [ ] AC-011: Supported message types:
+  * `0x01` (Pheromone Sync): edge pheromone weight propagation.
+  * `0x02` (Antigen Sync): transmission of threat signatures.
+  * `0x03` (Graph Delta Sync): sending graph structural deltas.
+- [ ] AC-012: **Herd Immunity** Mechanism: upon receiving an Antigen Sync packet, the node must update its immunological memory immediately and filter future requests with the received signature.
+- [ ] AC-013: Packet clutter handling: use of Vector Clocks / Causal Watermarks to discard outdated packets.
+- [ ] AC-014: Limited epidemic broadcast: each node forwards the received information to $K$ random neighbors (default: $K=3$) to avoid broadcast storms.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Implementação do socket de escuta UDP assíncrono e dispatcher de mensagens em Tokio.
-- [ ] Serializador e desserializador binário manual (zero-copy parsing).
-- [ ] Mecanismo de controle de concorrência sem contenção para escrita das mensagens recebidas.
-- [ ] Testes unitários com simulação de desordem e perda de pacotes.
-- [ ] Cobertura de testes unitários superior a 80%.
+- [ ] Implementation of asynchronous UDP listening socket and message dispatcher in Tokyo.
+- [ ] Manual binary serializer and deserializer (zero-copy parsing).
+- [ ] Contention-free concurrency control mechanism for writing received messages.
+- [ ] Unit tests with clutter and packet loss simulation.
+- [ ] Unit test coverage greater than 80%.
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Payload Binário de Antigen Sync (Representação Conceitual)
+### Antigen Sync Binary Payload (Conceptual Representation)
 
-**Pacote binário enviado pela rede (representado em Hex):**
+**Binary packet sent over the network (represented in Hex):**
 ```
 03                      ; Magic Byte (v6 Swarm)
 8a72f19b449eba02        ; Source Node ID (16 bytes - UUID)
@@ -57,93 +57,93 @@ a9f4c32b85e0            ; Payload: SHA-256 parcial do padrão de ataque
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Serialização de Mensagem | Struct preenchida | Vetor de bytes binário estrito |
-| UT-002 | Desserialização e Validação | Vetor de bytes corrompido (falta de bytes) | Retorna `Err(InvalidPacket)` sem panic |
-| UT-003 | Causal Watermark Obsoleto | Mensagem recebida com watermark < local | Mensagem descartada silenciosamente |
-| UT-004 | Seleção de Vizinhos Aleatórios | Lista de 10 nós, $K=3$ | Retorna exatamente 3 nós distintos de forma estocástica |
+| UT-001 | Message Serialization | Filled Structure | Strict Binary Byte Vector |
+| UT-002 | Deserialization and Validation | Corrupt byte vector (missing bytes) | Returns `Err(InvalidPacket)` without panic |
+| UT-003 | Causal Obsolete Watermark | Message received with watermark < location | Message silently discarded |
+| UT-004 | Random Neighbor Selection | List of 10 nodes, $K=3$ | Returns exactly 3 distinct nodes stochastically |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Propagação de Ameaça | Injeção de ameaça no Nó 1 propaga e bloqueia consultas semelhantes no Nó 3 em menos de 100ms |
-| FT-002 | Recuperação de Partição de Rede | Após reconexão de nó isolado, mensagens acumuladas com watermarks maiores atualizam o estado local |
+| FT-001 | Threat Propagation | Threat injection on Node 1 propagates and blocks similar queries on Node 3 in less than 100ms |
+| FT-002 | Network Partition Recovery | After isolated node reconnection, accumulated messages with larger watermarks update the local state |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Gossip → AIS Memory (FT-018) | O pacote de tipo `0x02` insere um registro ativo na Antigen Memory |
-| IT-002 | Gossip → ACO Evaporation (FT-014) | Sincroniza decaimentos de feromônios em arestas compartilhadas |
+| IT-001 | Gossip → AIS Memory (FT-018) | Package of type `0x02` inserts an active record into Antigen Memory |
+| IT-002 | Gossip → ACO Evaporation (FT-014) | Synchronizes pheromone decays on shared edges |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Comunicação de alta performance, assíncrona e resiliente a falhas físicas de links de rede inter-datacenters em clusters KCE.
+**Context:** High-performance, asynchronous and resilient to physical failure communication of inter-datacenter network links in KCE clusters.
 
-**Assumptions:** A rede física permite tráfego UDP na porta configurada (padrão: 9000). A perda ocasional de pacotes individuais de telemetria (como feromônios) é tolerada e corrigida nos ciclos seguintes.
+**Assumptions:** The physical network allows UDP traffic on the configured port (default: 9000). Occasional loss of individual telemetry packets (such as pheromones) is tolerated and corrected in subsequent cycles.
 
-**Requirements:** R-001: Comunicação baseada em UDP | R-002: Parser binário manual seguro | R-003: Herd Immunity imediata | R-004: Controle causal por watermarks.
+**Requirements:** R-001: UDP-based communication | R-002: Secure manual binary parser | R-003: Immediate Herd Immunity | R-004: Causal control by watermarks.
 
-**Evidence:** Execução de testes de caos de rede (latência artificial + 20% de perda de pacotes) provando convergência final de dados.
+**Evidence:** Execution of network chaos tests (artificial latency + 20% packet loss) proving final data convergence.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Latência de Disseminação | Tempo para 90% dos nós receberem uma atualização de ameaça | < 50ms |
-| Overhead de Rede | Consumo de banda médio por nó em idle | < 10 KB/s |
-| Segurança de Pacote | Prevenção de ataques de replay | Descarte por watermark + assinatura criptográfica leve |
+| Dissemination Latency | Time for 90% of nodes to receive a threat update | < 50ms |
+| Network Overhead | Average bandwidth consumption per node at idle | < 10 KB/s |
+| Package Security | Preventing replay attacks | Disposal by watermark + lightweight cryptographic signature |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:**
-- Convergência completa de feromônios após estabilização de rede.
-- Zero vazamentos de memória ou panics no loop de recepção de pacotes.
-- Cobertura de testes unitários superior a 80%.
+**Success:**
+- Complete convergence of pheromones after network stabilization.
+- Zero memory leaks or panics in the packet reception loop.
+- Unit test coverage greater than 80%.
 
-**Falha (BLOQUEANTE):**
-- Loops de repasse infinitos (broadcast storms) que saturem a rede.
-- Buffer overflow ou pânico de memória ao ler payloads corrompidos.
+**Failure (BLOCKING):**
+- Infinite relay loops (broadcast storms) that saturate the network.
+- Buffer overflow or memory panic when reading corrupted payloads.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate / Ferramenta | Versão | Propósito |
+| Crate/Tool | Version | Purpose |
 |--------------------|--------|-----------|
-| `tokio` | ^1.35 | Sockets assíncronos UDP |
-| `crc32fast` | ^1.3 | Checksum de validação de pacotes |
+| `tokio` | ^1.35 | UDP asynchronous sockets |
+| `crc32fast` | ^1.3 | Packet validation checksum |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-029-SWARM-GOSSIP | Esta especificação |
+| Spec | FT-029-SWARM-GOSSIP | This specification |
 | Design | `docs/kce_distributed_architecture.md` | Swarm Gossip Protocol |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase 1)
-Envio básico de batimentos cardíacos (heartbeat) via UDP para detecção simples de presença de nós vizinhos. Sem criptografia ou watermarks.
+### MVP (Phase 1)
+Basic sending of heartbeats via UDP for simple detection of the presence of neighboring nodes. No encryption or watermarks.
 
-### Iteração 1 (Fase 2)
-Implementação de Pheromone Sync e Antigen Sync com controle causal baseado em watermarks e repasse epidêmico restrito.
+### Iteration 1 (Phase 2)
+Implementation of Pheromone Sync and Antigen Sync with causal control based on watermarks and restricted epidemic pass-through.
 
-### Iteração 2 (Fase 3)
-Criptografia simétrica opcional nos payloads, controle completo de deltas de grafos estruturais via CRDTs e integração com a homeostase distribuída.
+### Iteration 2 (Phase 3)
+Optional symmetric encryption on payloads, complete control of structural graph deltas via CRDTs and integration with distributed homeostasis.

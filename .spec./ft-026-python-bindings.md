@@ -1,48 +1,48 @@
 # FT-026 — Native Python Bindings (PyO3)
 
-**Módulo:** Interface | **Versão:** v6.0 | **Prioridade:** P1 — Importante  
-**Artefato ID:** FT-026-PYTHON-BINDINGS | **Atualização:** 2026-05-30
+**Module:** Interface | **Version:** v6.0 | **Priority:** P1 — Important  
+**Artifact ID:** FT-026-PYTHON-BINDINGS | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O **Native Python Bindings** expõe as funcionalidades de alta performance do KCE (desenvolvido em Rust) diretamente no ecossistema Python. Utilizando a biblioteca PyO3, este módulo gera um pacote dinâmico compilado (`.so`/`.pyd`) que pode ser importado em scripts Python tradicionais (`import kce_python`). Isso simplifica a adoção do motor cognitivo em projetos de ciência de dados e engenharia de machine learning sem comprometer a performance computacional do backend Rust.
+**Native Python Bindings** exposes the high-performance features of KCE (developed in Rust) directly to the Python ecosystem. Using the PyO3 library, this module generates a compiled dynamic package (`.so`/`.pyd`) that can be imported into traditional Python scripts (`import kce_python`). This simplifies the adoption of the cognitive engine in data science and machine learning engineering projects without compromising the computational performance of the Rust backend.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compilação dinâmica limpa em sistemas Linux (gerando arquivo `.so`)
-- [ ] AC-002: Gerenciamento eficiente do Global Interpreter Lock (GIL) do Python nas operações pesadas
-- [ ] AC-003: Mapeamento claro de erros do Rust para exceções adequadas do Python (`ValueError`, `RuntimeError`)
+### General
+- [ ] AC-001: Clean dynamic compilation on Linux systems (generating `.so` file)
+- [ ] AC-002: Efficient management of Python's Global Interpreter Lock (GIL) in heavy operations
+- [ ] AC-003: Clear mapping of Rust errors to proper Python exceptions (`ValueError`, `RuntimeError`)
 
-### Específicos
-- [ ] AC-010: Exposição da classe `PyLatencyHistogram` com métodos `record(us)`, `percentiles()` e `reset()`.
-- [ ] AC-011: Exposição da função `retrieve(query_vector, top_k)` retornando uma lista de tuplas `(id, score)`.
-- [ ] AC-012: Exposição da função `encode(nodes)` recebendo uma lista de tuplas `(state, maturity)` e retornando o payload mRNA compilado em bytes.
-- [ ] AC-013: Exposição da função `classify(vector, self_patterns)` retornando o label de classificação e o score de confiança.
-- [ ] AC-014: Exposição da função `sinkhorn_distance(a, b)` retornando o valor da distância de transporte ótimo Sinkhorn.
-- [ ] AC-015: Exposição da função `cosine_similarity(a, b)` retornando a similaridade de cosseno de forma rápida.
-- [ ] AC-016: Preservação da integridade de memória nas conversões de dados complexos entre CPython e a runtime Rust.
+### Specifics
+- [ ] AC-010: Exposure of the `PyLatencyHistogram` class with methods `record(us)`, `percentiles()` and `reset()`.
+- [ ] AC-011: Exposure of the `retrieve(query_vector, top_k)` function returning a list of `(id, score)` tuples.
+- [ ] AC-012: Exposure of the `encode(nodes)` function receiving a list of `(state, maturity)` tuples and returning the mRNA payload compiled into bytes.
+- [ ] AC-013: Exposure of the `classify(vector, self_patterns)` function returning the classification label and confidence score.
+- [ ] AC-014: Exposure of the `sinkhorn_distance(a, b)` function returning the value of the Sinkhorn optimal transport distance.
+- [ ] AC-015: Exposure of the `cosine_similarity(a, b)` function returning cosine similarity quickly.
+- [ ] AC-016: Preservation of memory integrity in complex data conversions between CPython and the Rust runtime.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Extensão compilada via maturin / cargo-c com sucesso
-- [ ] 6 funções nativas expostas e testadas via scripts Python
-- [ ] Classe de telemetria `PyLatencyHistogram` funcional e documentada
-- [ ] Testes unitários com o framework `pytest` passando em CI
-- [ ] Mapeamento e propagação corretos de exceções sem quebras catastróficas (Core Dumps)
-- [ ] Documentação de API no padrão Docstring integrada
+- [ ] Extension compiled via maturin/cargo-c successfully
+- [ ] 6 native functions exposed and tested via Python scripts
+- [ ] Functional and documented `PyLatencyHistogram` telemetry class
+- [ ] Unit tests with the `pytest` framework passing in CI
+- [ ] Correct mapping and propagation of exceptions without catastrophic breaks (Core Dumps)
+- [ ] API documentation in the Docstring standard integrated
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Chamada no Script Python
+### Call in Python Script
 
 ```python
 import kce_python
@@ -76,87 +76,87 @@ print(f"P95 latency: {metrics['p95_us']} us")
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários (pytest)
+### 5.1 Unit Tests (pytest)
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Cosine Similarity | Dois vetores idênticos | Retorna `1.0` |
-| UT-002 | Erro de dimensão no cosseno | Vetores com tamanhos diferentes | Lança `ValueError` no Python |
-| UT-003 | Classificador AIS | Vetor idêntico a um padrão self | Label `"self"` com alta confiança |
-| UT-004 | Histograma percentis | Gravação de amostras | Dicionário contendo count, mean, p50, p95 e p99 |
+| UT-001 | Cosine Similarity | Two identical vectors | Returns `1.0` |
+| UT-002 | Dimension error in cosine | Vectors with different sizes | Release `ValueError` in Python |
+| UT-003 | AIS Classifier | Vector identical to a self pattern | Label `"self"` with high confidence |
+| UT-004 | Percentile histogram | Sample recording | Dictionary containing count, mean, p50, p95 and p99 |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Integração com numpy/scipy | Vetores extraídos de arrays numpy são convertidos e processados corretamente |
-| FT-002 | Validação de Garbage Collection | Alocação repetida e desalocação de instâncias de histograma não geram vazamentos de memória |
+| FT-001 | Integration with numpy/scipy | Vectors extracted from numpy arrays are converted and processed correctly |
+| FT-002 | Garbage Collection Validation | Repeated allocation and deallocation of histogram instances do not generate memory leaks |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Python Binding → MceEngine | A função `encode` traduz strings de estado ("Stem", "Apoptosis") para enums Rust, retornando bytes válidos |
+| IT-001 | Python Binding → MceEngine | The `encode` function translates state strings ("Stem", "Apoptosis") to Rust enums, returning valid bytes |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Disponibilização da biblioteca KCE para cientistas de dados e engenheiros de aprendizado de máquina que utilizam Python, unindo a facilidade da linguagem ao desempenho computacional em Rust.
+**Context:** Provision of the KCE library for data scientists and machine learning engineers who use Python, combining the ease of the language with computational performance in Rust.
 
-**Assumptions:** O Python de destino é v3.8 ou superior. Os vetores passados são conversíveis para tipos primitivos (`f64`). O compilador PyO3 gerencia as referências de forma segura sob a GIL.
+**Assumptions:** Target Python is v3.8 or higher. The passed vectors are convertible to primitive types (`f64`). The PyO3 compiler manages references securely under the GIL.
 
-**Requirements:** R-001: Empacotamento compilado nativo | R-002: Tradução robusta de enums e tipos estruturados | R-003: Coerência matemática nas saídas comparadas com o core Rust.
+**Requirements:** R-001: Native compiled packaging | R-002: Robust translation of enums and structured types | R-003: Mathematical coherence in outputs compared to the Rust core.
 
-**Evidence:** Suíte de testes `pytest` localizada em `crates/kce-python/tests/` executada em pipeline local.
+**Evidence:** Test suite `pytest` located at `crates/kce-python/tests/` run in local pipeline.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Overhead de Conversão | Custo extra de passagem de dados Python -> Rust | < 2% sobre o custo da operação nativa |
-| Compatibilidade de Tipos | Coerção de tipos numéricos do Python/Numpy | Suporte a inteiros e floats de 64 bits |
+| Conversion Overhead | Extra cost of passing data Python -> Rust | < 2% of the cost of native operation |
+| Type Compatibility | Python/Numpy numeric type coercion | Support for 64-bit integers and floats |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** Passagem bem-sucedida de todos os testes unitários via `pytest`, sem ocorrências de falhas catastróficas de segmentação (`segmentation faults`).
+**Success:** Successfully passed all unit tests via `pytest`, with no occurrences of catastrophic segmentation faults (`segmentation faults`).
 
-**Falha (BLOQUEANTE):** Fugas de memória sistemáticas verificadas no loop de GC do interpretador ou estouro de pilha por conversão cíclica.
+**Fault (BLOCKING):** Systematic memory leaks verified in the interpreter's GC loop or stack overflow due to cyclic conversion.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate / Tool | Versão | Propósito |
+| Crate/Tool | Version | Purpose |
 |--------------|--------|-----------|
-| `pyo3` | ^0.21 | Interface Rust-Python |
-| `maturin` | ^1.0 | Builder e empacotador da extensão |
-| Python | >= 3.8 | Interpretador runtime alvo |
+| `pyo3` | ^0.21 | Rust-Python Interface |
+| `maturin` | ^1.0 | Extension Builder and Packer |
+| Python | >= 3.8 | Target runtime interpreter |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-026-PYTHON-BINDINGS | Esta especificação |
-| Código | `crates/kce-python/src/lib.rs` | Bindings dinâmicas PyO3 |
+| Spec | FT-026-PYTHON-BINDINGS | This specification |
+| Code | `crates/kce-python/src/lib.rs` | PyO3 dynamic bindings |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase Atual)
-Exportação direta das métricas matemáticas, classificação de anomalias por vetor de similaridade e exportação do histograma de latência.
+### MVP (Current Phase)
+Direct export of mathematical metrics, classification of anomalies by similarity vector and export of the latency histogram.
 
-### Iteração 1
-Suporte para carregar datasets inteiros do KineSQL diretamente a partir de caminhos de arquivo no Python.
+### Iteration 1
+Support for loading entire KineSQL datasets directly from file paths in Python.
 
-### Iteração 2
-Suporte para paralelismo multi-thread com liberação explícita da GIL (`py.allow_threads`).
+### Iteration 2
+Support for multi-thread parallelism with explicit release of the GIL (`py.allow_threads`).

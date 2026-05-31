@@ -1,45 +1,45 @@
 # FT-003 — ECMA (Embryological Cognitive Memory Architecture)
 
-**Módulo:** Core Engine | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-003-ECMA-ENGINE | **Atualização:** 2026-05-23
+**Module:** Core Engine | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-003-ECMA-ENGINE | **Updated:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O ECMA é o motor de **evolução cognitiva** do KCE. Nós de conhecimento evoluem através de estados (Stem → Progenitor → Specialized → Apoptosis) baseado em uso, entropia e conexões. Implementa um ciclo de vida biológico-inspirado que garante que conhecimento relevante amadurece e conhecimento obsoleto é degradado automaticamente.
+ECMA is the **cognitive evolution** engine of the KCE. Knowledge nodes evolve through states (Stem → Progenitor → Specialized → Apoptosis) based on usage, entropy, and connections. It implements a biologically-inspired lifecycle that ensures relevant knowledge matures and obsolete knowledge is automatically degraded.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: Estados implementados: `Stem`, `Progenitor`, `Specialized`, `Apoptosis`
-- [ ] AC-011: Transições automáticas baseadas em `usage_count`, `entropy`, `connections`
-- [ ] AC-012: Nós evoluem para `Specialized` após 10+ interações com alta relevância
-- [ ] AC-013: Nós com baixa relevância (entropia > threshold) degradam para `Apoptosis`
-- [ ] AC-014: Nenhuma transição inválida ocorre (ex: Apoptosis → Stem)
-- [ ] AC-015: Função `maturity(node)` retorna score 0.0..1.0
-- [ ] AC-016: Feedback loop: resultado de execução MCE retroalimenta maturidade
-- [ ] AC-017: Estado do nó é persistido no KineSQL
+- [ ] AC-010: States implemented: `Stem`, `Progenitor`, `Specialized`, `Apoptosis`
+- [ ] AC-011: Automatic transitions based on `usage_count`, `entropy`, `connections`
+- [ ] AC-012: Nodes evolve to `Specialized` after 10+ interactions with high relevance
+- [ ] AC-013: Nodes with low relevance (entropy > threshold) degrade to `Apoptosis`
+- [ ] AC-014: No invalid transitions occur (e.g., Apoptosis → Stem)
+- [ ] AC-015: Function `maturity(node)` returns score 0.0..1.0
+- [ ] AC-016: Feedback loop: MCE execution result feeds back into maturity
+- [ ] AC-017: Node state is persisted in KineSQL
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Todos os 4 estados implementados
-- [ ] Máquina de estados com transições validadas
-- [ ] Função de maturidade ativa e testada
-- [ ] Feedback loop MCE → ECMA funcional
-- [ ] Persistência de estados no KineSQL
-- [ ] Testes unitários ≥ 80% cobertura
-- [ ] Sem transições inválidas possíveis
+- [ ] All 4 states implemented
+- [ ] State machine with validated transitions
+- [ ] Maturity function active and tested
+- [ ] MCE → ECMA feedback loop functional
+- [ ] State persistence in KineSQL
+- [ ] Unit tests ≥ 80% coverage
+- [ ] No invalid transitions possible
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Evolução de nó
-**Entrada (estado inicial):**
+### Node evolution
+**Input (initial state):**
 ```json
 {
   "node_id": 42,
@@ -51,7 +51,7 @@ O ECMA é o motor de **evolução cognitiva** do KCE. Nós de conhecimento evolu
 }
 ```
 
-**Após 15 interações com alta relevância:**
+**After 15 interactions with high relevance:**
 ```json
 {
   "node_id": 42,
@@ -63,7 +63,7 @@ O ECMA é o motor de **evolução cognitiva** do KCE. Nós de conhecimento evolu
 }
 ```
 
-### Degradação (Apoptosis)
+### Degradation (Apoptosis)
 ```json
 {
   "node_id": 99,
@@ -78,98 +78,98 @@ O ECMA é o motor de **evolução cognitiva** do KCE. Nós de conhecimento evolu
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Input | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Maturity > 0.5 para nó ativo | usage=10, entropy=0.3 | `maturity > 0.5` |
-| UT-002 | Transição Stem → Progenitor | usage=5, entropy=0.5 | `state == Progenitor` |
-| UT-003 | Transição → Specialized | usage=15, entropy=0.2 | `state == Specialized` |
-| UT-004 | Degradação → Apoptosis | usage=1, entropy=0.95 | `state == Apoptosis` |
-| UT-005 | Transição inválida bloqueada | Apoptosis → Stem | `Err(InvalidTransition)` |
-| UT-006 | Maturity range | qualquer nó | `0.0 <= maturity <= 1.0` |
+| UT-001 | Maturity > 0.5 for active node | usage=10, entropy=0.3 | `maturity > 0.5` |
+| UT-002 | Stem → Progenitor transition | usage=5, entropy=0.5 | `state == Progenitor` |
+| UT-003 | Transition → Specialized | usage=15, entropy=0.2 | `state == Specialized` |
+| UT-004 | Degradation → Apoptosis | usage=1, entropy=0.95 | `state == Apoptosis` |
+| UT-005 | Invalid transition blocked | Apoptosis → Stem | `Err(InvalidTransition)` |
+| UT-006 | Maturity range | any node | `0.0 <= maturity <= 1.0` |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Transição Apoptosis → Stem | `Err(InvalidTransition)` |
-| UF-002 | Entropy negativa | `Err(InvalidEntropy)` |
-| UF-003 | Nó inexistente para update | `Err(NodeNotFound)` |
+| UF-001 | Apoptosis → Stem transition | `Err(InvalidTransition)` |
+| UF-002 | Negative entropy | `Err(InvalidEntropy)` |
+| UF-003 | Non-existent node for update | `Err(NodeNotFound)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Simular 20 interações | Nó evolui Stem → Progenitor → Specialized |
-| FT-002 | Simular abandono | Nó degrada para Apoptosis |
-| FT-003 | Feedback loop MCE | Resultado positivo aumenta maturidade |
+| FT-001 | Simulate 20 interactions | Node evolves Stem → Progenitor → Specialized |
+| FT-002 | Simulate abandonment | Node degrades to Apoptosis |
+| FT-003 | MCE feedback loop | Positive result increases maturity |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Retrieval → ECMA | Nós retornados têm maturidade atualizada |
-| IT-002 | ECMA → KineSQL | Estados persistem após restart |
-| IT-003 | MCE → ECMA | Feedback de execução retroalimenta |
+| IT-001 | Retrieval → ECMA | Returned nodes have updated maturity |
+| IT-002 | ECMA → KineSQL | States persist after restart |
+| IT-003 | MCE → ECMA | Execution feedback feeds back |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Motor de evolução cognitiva que implementa ciclo de vida biológico para nós de conhecimento; garante que informação relevante amadurece e obsoleta é removida.
+**Context:** Cognitive evolution engine that implements a biological lifecycle for knowledge nodes; ensures relevant information matures and obsolete information is removed.
 
-**Assumptions:** Threshold de transição é configurável; entropia é calculada externamente; usage_count é incrementado pelo Retrieval Engine; persistência via KineSQL.
+**Assumptions:** Transition threshold is configurable; entropy is calculated externally; usage_count is incremented by the Retrieval Engine; persistence via KineSQL.
 
-**Requirements:** R-001: 4 estados | R-002: transições automáticas | R-003: maturity 0..1 | R-004: feedback loop MCE | R-005: persistência | R-006: sem transições inválidas.
+**Requirements:** R-001: 4 states | R-002: automatic transitions | R-003: maturity 0..1 | R-004: MCE feedback loop | R-005: persistence | R-006: no invalid transitions.
 
 **Evidence:** `tests/ecma_tests.rs` | `src/ecma/state_machine.rs`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Alvo |
+| Aspect | Target |
 |---------|------|
-| Latência update | < 1ms por nó |
-| Memória por nó | < 256 bytes |
-| Transições/s | ≥ 10k |
+| Update latency | < 1ms per node |
+| Memory per node | < 256 bytes |
+| Transitions/s | ≥ 10k |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** 0 transições inválidas | Maturity sempre em [0,1] | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Transição inválida ocorre | Maturity fora de range | Estado corrompido após restart
+**Success:** 0 invalid transitions | Maturity always in [0,1] | Coverage ≥ 80%  
+**Failure (BLOCKING):** Invalid transition occurs | Maturity out of range | Corrupted state after restart
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-**Deps internas:** Retrieval (usage_count), Graph (connections), MCE (feedback), KineSQL (persistência)  
+**Internal deps:** Retrieval (usage_count), Graph (connections), MCE (feedback), KineSQL (persistence)  
 **Rust:** ≥ 1.75
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-003-ECMA-ENGINE |
-| Código | `src/ecma/mod.rs`, `src/ecma/state_machine.rs` |
-| Teste | `tests/ecma_integration.rs` |
+| Code | `src/ecma/mod.rs`, `src/ecma/state_machine.rs` |
+| Test | `tests/ecma_integration.rs` |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-4 estados | Transições manuais | `maturity()` | 5+ testes unitários
+### MVP (Week 1-2)
+4 states | Manual transitions | `maturity()` | 5+ unit tests
 
-### Iteração 1 (Semana 3-4)
-Transições automáticas por threshold | Feedback loop MCE | Validação de transição | Benchmark
+### Iteration 1 (Week 3-4)
+Automatic transitions by threshold | MCE feedback loop | Transition validation | Benchmark
 
-### Iteração 2 (Semana 5-6)
-Persistência KineSQL | Integração completa pipeline | Testes de carga | Docs
+### Iteration 2 (Week 5-6)
+KineSQL persistence | Full pipeline integration | Load tests | Docs

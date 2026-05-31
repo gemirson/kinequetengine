@@ -1,42 +1,42 @@
 # FT-022 — Immune Network Regulation
 
-**Módulo:** AIS (Artificial Immune System) | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-022-NETWORK-REGULATION | **Atualização:** 2026-05-23
+**Module:** AIS (Artificial Immune System) | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-022-NETWORK-REGULATION | **Update:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O Immune Network Regulation é o **controlador de equilíbrio global** do sistema KCE. Regula a interação entre todos os módulos AIS e ACO, evitando hiperatividade (overfitting), sub-atividade (perda de sensibilidade) e oscilações descontroladas. Inspirado na teoria da rede imunológica de Jerne — anticorpos regulam uns aos outros para manter homeostase.
+Immune Network Regulation is the **global balance controller** of the KCE system. Regulates the interaction between all AIS and ACO modules, avoiding hyperactivity (overfitting), under-activity (loss of sensitivity) and uncontrolled oscillations. Inspired by Jerne's immune network theory — antibodies regulate each other to maintain homeostasis.
 
-### Valor
-- Estabilidade sistêmica — previne oscilações e cascatas
-- Evita hiperatividade (overfitting / excesso de amplificação)
-- Regula interação entre módulos automaticamente
-- Homeostase: sistema mantém equilíbrio sem intervenção manual
+### Value
+- Systemic stability — prevents oscillations and cascades
+- Prevents hyperactivity (overfitting/excess amplification)
+- Automatically regulates interaction between modules
+- Homeostasis: system maintains balance without manual intervention
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compila sem warnings em `--release`
-- [ ] AC-002: Thread-safe para monitoramento concorrente
+### General
+- [ ] AC-001: Compiles without warnings in `--release`
+- [ ] AC-002: Thread-safe for concurrent monitoring
 
-### Específicos
-- [ ] AC-010: `regulate()` monitora métricas de todos módulos AIS/ACO e aplica ajustes
-- [ ] AC-011: Detecta hiperatividade: amplification_rate > threshold → reduz sensitivity
-- [ ] AC-012: Detecta sub-atividade: detection_rate < min → aumenta sensitivity
-- [ ] AC-013: Regula taxa de mutação: convergência alta → aumenta rate; divergência → diminui
-- [ ] AC-014: Regula evaporação: stagnation → aumenta ρ; volatilidade → diminui ρ
-- [ ] AC-015: Feedback loop: métricas → regulação → ajuste → nova medição
-- [ ] AC-016: Intervalo de regulação configurável (default: 30s)
-- [ ] AC-017: Limites de regulação (guardrails) — nenhum parâmetro sai de range safe
-- [ ] AC-018: Dashboard de status de regulação (JSON endpoint `/regulation/status`)
-- [ ] AC-019: Log detalhado de cada ajuste para auditoria
+### Specifics
+- [ ] AC-010: `regulate()` monitors metrics from all AIS/ACO modules and applies adjustments
+- [ ] AC-011: Detects hyperactivity: amplification_rate > threshold → reduces sensitivity
+- [ ] AC-012: Detects sub-activity: detection_rate < min → increases sensitivity
+- [ ] AC-013: Regulates mutation rate: high convergence → increases rate; divergence → decreases
+- [ ] AC-014: Regulates evaporation: stagnation → increases ρ; volatility → decreases ρ
+- [ ] AC-015: Feedback loop: metrics → regulation → adjustment → new measurement
+- [ ] AC-016: Configurable regulation interval (default: 30s)
+- [ ] AC-017: Regulation limits (guardrails) — no parameters leave range safe
+- [ ] AC-018: Regulation status dashboard (JSON endpoint `/regulation/status`)
+- [ ] AC-019: Detailed log of each adjustment for audit
 
-### Guardrails (limites safe)
-| Parâmetro | Min | Max | Default |
+### Guardrails (safe limits)
+| Parameter | Min | Max | Default |
 |-----------|-----|-----|---------|
 | detection_threshold | 0.3 | 0.95 | 0.7 |
 | amplification_cap | 2.0 | 10.0 | 5.0 |
@@ -48,22 +48,22 @@ O Immune Network Regulation é o **controlador de equilíbrio global** do sistem
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `regulate()` funcional com monitoramento de métricas
-- [ ] Detecção de hiperatividade e sub-atividade
-- [ ] Ajuste automático de 5+ parâmetros
-- [ ] Guardrails implementados e validados
-- [ ] Feedback loop funcional
+- [ ] Functional `regulate()` with metrics monitoring
+- [ ] Overactivity and underactivity detection
+- [ ] Automatic adjustment of 5+ parameters
+- [ ] Guardrails implemented and validated
+- [ ] Functional feedback loop
 - [ ] Endpoint `/regulation/status`
-- [ ] Testes de estabilidade
-- [ ] Cobertura ≥ 80%
+- [ ] Stability Tests
+- [ ] Coverage ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Ciclo de regulação
+### Regulation cycle
 
-**Métricas de entrada (coletadas):**
+**Input metrics (collected):**
 ```json
 {
   "metrics": {
@@ -79,7 +79,7 @@ O Immune Network Regulation é o **controlador de equilíbrio global** do sistem
 }
 ```
 
-**Regulação aplicada:**
+**Regulation applied:**
 ```json
 {
   "adjustments": [
@@ -128,7 +128,7 @@ O Immune Network Regulation é o **controlador de equilíbrio global** do sistem
 }
 ```
 
-### Hiperatividade detectada
+### Hyperactivity detected
 ```json
 {
   "alert": "HYPERACTIVITY_DETECTED",
@@ -143,115 +143,115 @@ O Immune Network Regulation é o **controlador de equilíbrio global** do sistem
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | FPR alto → reduce threshold | threshold diminui |
-| UT-002 | Detection rate baixo → increase sensitivity | threshold diminui |
-| UT-003 | Stagnation ACO → increase ρ | evaporation_rho aumenta |
-| UT-004 | Mutation success baixo → increase rate | mutation_rate aumenta |
-| UT-005 | Guardrail min violado | parâmetro clamped a min |
-| UT-006 | Guardrail max violado | parâmetro clamped a max |
-| UT-007 | Sistema balanceado | sem ajustes aplicados |
-| UT-008 | Feedback loop 10 ciclos | sistema converge para equilíbrio |
-| UT-009 | Hiperatividade detectada | alert gerado + sensitivity reduzida |
-| UT-010 | Sub-atividade detectada | sensitivity aumentada |
+| UT-001 | High FPR → reduce threshold | threshold decreases |
+| UT-002 | Low detection rate → increase sensitivity | threshold decreases |
+| UT-003 | Stagnation ACO → increase ρ | evaporation_rho increases |
+| UT-004 | Mutation success low → increase rate | mutation_rate increases |
+| UT-005 | Guardrail violated | parameter clamped to min |
+| UT-006 | Guardrail max violated | parameter clamped to max |
+| UT-007 | Balanced system | no adjustments applied |
+| UT-008 | Feedback loop 10 cycles | system converges to equilibrium |
+| UT-009 | Hyperactivity detected | alert generated + reduced sensitivity |
+| UT-010 | Sub-activity detected | increased sensitivity |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Métricas indisponíveis | `Ok(skip)` — regulação adiada |
-| UF-002 | Interval negativo | `Err(InvalidInterval)` |
-| UF-003 | Guardrail invertido (min > max) | `Err(InvalidGuardrail)` |
+| UF-001 | Unavailable metrics | `Ok(skip)` — regulation deferred |
+| UF-002 | Negative range | `Err(InvalidInterval)` |
+| UF-003 | Inverted guardrail (min > max) | `Err(InvalidGuardrail)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado |
+| ID | Scenario | Result |
 |----|---------|-----------|
-| FT-001 | 100 ciclos de regulação | Sistema mantém equilíbrio |
-| FT-002 | Injeção de anomalias massivas | Regulador estabiliza em < 10 ciclos |
-| FT-003 | Endpoint /regulation/status | JSON válido com status de todos módulos |
-| FT-004 | Guardrails nunca violados | 0 violations em 1000 ciclos |
+| FT-001 | 100 regulation cycles | System maintains balance |
+| FT-002 | Massive anomaly injection | Regulator stabilizes in < 10 cycles |
+| FT-003 | Endpoint /regulation/status | Valid JSON with status of all modules |
+| FT-004 | Guardrails never breached | 0 violations in 1000 cycles |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Regulation → Detection (FT-017) | Threshold ajustado |
-| IT-002 | Regulation → Amplifier (FT-019) | Cap ajustado |
-| IT-003 | Regulation → Mutation (FT-021) | Rate ajustada |
-| IT-004 | Regulation → Evaporation (FT-014) | ρ ajustado |
-| IT-005 | Regulation → ACO (FT-015) | Ant count ajustado |
-| IT-006 | Regulation → API | Endpoint /regulation/status funcional |
-| IT-007 | Regulation → Métricas | `kce_regulation_adjustments` registrado |
+| IT-001 | Regulation → Detection (FT-017) | Adjusted Threshold |
+| IT-002 | Regulation → Amplifier (FT-019) | Adjusted cap |
+| IT-003 | Regulation → Mutation (FT-021) | Adjusted rate |
+| IT-004 | Regulation → Evaporation (FT-014) | ρ adjusted |
+| IT-005 | Regulation → ACO (FT-015) | Ant count adjusted |
+| IT-006 | Regulation → API | Endpoint /regulation/functional status |
+| IT-007 | Regulation → Metrics | `kce_regulation_adjustments` registered |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Sem regulação global, módulos AIS e ACO podem entrar em ciclos viciosos: hiperatividade (tudo é anomalia), sub-atividade (nada detecta), ou oscilação (flip-flop entre estados). O Network Regulation implementa homeostase inspirada na teoria de rede imunológica de Jerne — módulos regulam uns aos outros para equilíbrio sistêmico.
+**Context:** Without global regulation, AIS and ACO modules can enter vicious cycles: overactivity (everything is anomaly), underactivity (nothing detected), or oscillation (flip-flop between states). Network Regulation implements homeostasis inspired by Jerne's immune network theory — modules regulate each other for systemic balance.
 
 **Assumptions:**
-- Métricas de todos módulos AIS/ACO disponíveis via API interna
-- Regulação periódica (30s) é suficiente — não precisa ser real-time
-- Guardrails são limites hard — nunca violados
-- Feedback loop converge em < 10 ciclos na maioria dos cenários
-- Hiperatividade é mais perigosa que sub-atividade (false positives custam mais)
+- Metrics from all AIS/ACO modules available via internal API
+- Periodic regulation (30s) is sufficient — it does not need to be real-time
+- Guardrails are hard limits — never violated
+- Feedback loop converges in < 10 cycles in most scenarios
+- Overactivity is more dangerous than underactivity (false positives cost more)
 
 **Requirements:**
-- R-001: regulate() com monitoramento global
-- R-002: Detecção de hiperatividade e sub-atividade
-- R-003: Ajuste automático de 5+ parâmetros
-- R-004: Guardrails com limites hard
-- R-005: Feedback loop convergente
+- R-001: regulate() with global monitoring
+- R-002: Detection of overactivity and underactivity
+- R-003: Automatic adjustment of 5+ parameters
+- R-004: Guardrails with hard limits
+- R-005: Convergent feedback loop
 - R-006: Endpoint /regulation/status
-- R-007: Audit log de ajustes
-- R-008: Integração com todos módulos AIS + ACO
+- R-007: Audit adjustment log
+- R-008: Integration with all AIS + ACO modules
 
 **Evidence:**
 - `tests/regulation_tests.rs`
-- `tests/stability_tests.rs` — testes de convergência de feedback loop
-- `reports/regulation_dynamics.md` — análise de estabilidade
+- `tests/stability_tests.rs` — feedback loop convergence tests
+- `reports/regulation_dynamics.md` — stability analysis
 
 ---
 
-## 7. Critérios de Aceitação Não Funcionais
+## 7. Non-Functional Acceptance Criteria
 
-| Aspecto | Alvo |
+| Appearance | Target |
 |---------|------|
-| Latência regulate() | < 10ms |
-| Overhead no sistema | < 1% throughput |
-| Convergência feedback loop | < 10 ciclos |
-| Guardrail violations | 0 (absoluto) |
-| Memória adicional | < 5MB |
-| Disponibilidade /regulation/status | 100% |
+| latency regulate() | < 10ms |
+| System overhead | < 1% throughput |
+| Feedback loop convergence | < 10 cycles |
+| Guardrail violations | 0 (absolute) |
+| Additional memory | < 5MB |
+| Availability /regulation/status | 100% |
 
 ---
 
-## 8. Critérios de Qualidade e Métricas
+## 8. Quality Criteria and Metrics
 
-**Sucesso:**
-- 0 guardrail violations em todos testes
-- Feedback loop converge em < 10 ciclos (90%+ dos cenários)
-- Sistema mantém equilíbrio por 7+ dias sob carga
-- Cobertura ≥ 80%
+**Success:**
+- 0 guardrail violations in all tests
+- Feedback loop converges in < 10 cycles (90%+ of scenarios)
+- System maintains balance for 7+ days under load
+- Coverage ≥ 80%
 
-**Falha (BLOQUEANTE):**
-- Guardrail violado → sistema instável → **BLOQUEANTE**
-- Feedback loop não converge em 50 ciclos → **BLOQUEANTE**
-- Oscilação contínua (flip-flop > 20 ciclos) → **BLOQUEANTE**
-- Endpoint /regulation/status indisponível → **BLOQUEANTE**
+**Failure (BLOCKING):**
+- Violated guardrail → unstable system → **BLOCKING**
+- Feedback loop does not converge in 50 cycles → **BLOCKING**
+- Continuous oscillation (flip-flop > 20 cycles) → **BLOCKING**
+- Endpoint /regulation/status unavailable → **BLOCKING**
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-### Dependências Internas (todos módulos regulados)
-| Módulo | Parâmetros Regulados |
+### Internal Dependencies (all regulated modules)
+| Module | Regulated Parameters |
 |--------|----------------------|
 | Detection (FT-017) | detection_threshold |
 | Antigen (FT-018) | expiry_days |
@@ -262,65 +262,65 @@ O Immune Network Regulation é o **controlador de equilíbrio global** do sistem
 | Exploration (FT-015) | ant_count |
 
 ### Crates
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `tokio` | ^1.35 | Timer periódico |
+| `tokio` | ^1.35 | Periodic timer |
 | `parking_lot` | ^0.12 | RwLock |
-| `serde_json` | ^1.0 | Status endpoint |
+| `serde_json` | ^1.0 | Endpoint status |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-022-NETWORK-REGULATION |
-| Código | `src/ais/regulation.rs`, `src/ais/guardrails.rs` |
-| Teste | `tests/regulation_tests.rs`, `tests/stability_tests.rs` |
+| Code | `src/ais/regulation.rs`, `src/ais/guardrails.rs` |
+| Test | `tests/regulation_tests.rs`, `tests/stability_tests.rs` |
 | API | `GET /regulation/status` |
 | Deps | FT-014, FT-015, FT-017, FT-018, FT-019, FT-020, FT-021 |
 
 ---
 
-## 11. Entrega e Critérios de Aceitação do MVP — Roadmap
+## 11. MVP Delivery and Acceptance Criteria — Roadmap
 
-### MVP (Semana 1-2)
-| Item | Critério de Aceite |
+### MVP (Week 1-2)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| `regulate()` básico | Monitora 2 métricas (FPR, detection_rate) |
-| Guardrails hardcoded | 5 parâmetros com limites |
-| Log de ajustes | Console output |
-| 5+ testes unitários | Passando |
+| `regulate()` basic | Monitors 2 metrics (FPR, detection_rate) |
+| Hardcoded guardrails | 5 parameters with limits |
+| Adjustment log | Console output |
+| 5+ unit tests | Passing |
 
-**Saída:** Regulação básica de 2 parâmetros com guardrails.
+**Output:** Basic regulation of 2 parameters with guardrails.
 
 ---
 
-### Iteração 1 (Semana 3-4)
-| Item | Critério de Aceite |
+### Iteration 1 (Week 3-4)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| Monitoramento de 5+ métricas | Todos módulos AIS |
-| Ajuste automático de 5 parâmetros | Detection, Amplifier, Mutation, Evaporation, Exploration |
-| Feedback loop | Convergência em < 10 ciclos |
-| Detecção hiper/sub-atividade | Alertas gerados |
-| Endpoint /regulation/status | JSON funcional |
+| 5+ metrics monitoring | All AIS modules |
+| Automatic adjustment of 5 parameters | Detection, Amplifier, Mutation, Evaporation, Exploration |
+| Feedback loop | Convergence in < 10 cycles |
+| Over/under activity detection | Alerts generated |
+| Endpoint /regulation/status | Functional JSON |
 
-**Saída:** Regulação completa com feedback loop e status endpoint.
+**Output:** Complete regulation with feedback loop and endpoint status.
 
 ---
 
-### Iteração 2 (Semana 5-6)
-| Item | Critério de Aceite |
+### Iteration 2 (Week 5-6)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| Integração com todos 7 módulos | Parâmetros regulados end-to-end |
-| Testes de estabilidade 7 dias | Equilíbrio mantido |
-| Guardrails dinâmicos | Ajustáveis por config |
-| Audit trail completo | Histórico de ajustes |
-| Métricas Prometheus | `kce_regulation_*` exportadas |
-| Documentação | API docs + runbook operacional |
+| Integration with all 7 modules | End-to-end regulated parameters |
+| 7-day stability tests | Balance maintained |
+| Dynamic guardrails | Adjustable by config |
+| Complete audit trail | Adjustment history |
+| Prometheus Metrics | `kce_regulation_*` exported |
+| Documentation | API docs + operational runbook |
 
-**Saída:** Network Regulation production-ready — homeostase sistêmica autônoma.
+**Output:** Network Regulation production-ready — autonomous systemic homeostasis.
 
 ---
 
-*Documento gerado em 2026-05-23 — KineContext Engine Product Specification*
+*Document generated on 2026-05-23 — KineContext Engine Product Specification*

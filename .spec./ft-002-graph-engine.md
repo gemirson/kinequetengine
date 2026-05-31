@@ -1,51 +1,51 @@
-# FT-002 — Graph Engine (Grafo Semântico)
+# FT-002 — Graph Engine (Semantic Graph)
 
-**Módulo:** Core Engine | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-002-GRAPH-ENGINE | **Atualização:** 2026-05-23
-
----
-
-## 1. Contexto e Objetivo
-
-O Graph Engine gerencia o grafo semântico do KCE, responsável pela **expansão contextual** dos candidatos retornados pelo Retrieval Engine. Conecta conceitos via arestas ponderadas e expande o contexto de busca para além da similaridade direta, permitindo ao ECMA e MCE operar com visão relacional do conhecimento.
+**Module:** Core Engine | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-002-GRAPH-ENGINE | **Updated:** 2026-05-23
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 1. Context and Objective
 
-### Gerais
-- [ ] AC-001: Compila sem warnings em `--release`
-- [ ] AC-002: Thread-safe para leitura concorrente
+The Graph Engine manages the KCE semantic graph, responsible for the **contextual expansion** of candidates returned by the Retrieval Engine. It connects concepts via weighted edges and expands the search context beyond direct similarity, allowing ECMA and MCE to operate with a relational view of knowledge.
 
-### Específicos
-- [ ] AC-010: `add_edge(a, b, weight)` cria aresta bidirecional
-- [ ] AC-011: `neighbors(node_id)` retorna vizinhos diretos com pesos
-- [ ] AC-012: `expand(nodes, depth)` retorna subgrafo expandido até profundidade `depth`
-- [ ] AC-013: Expansão retorna ≤ 2x nós de entrada
-- [ ] AC-014: Sem duplicação de nós no resultado da expansão
-- [ ] AC-015: Latência de expansão < 10ms
-- [ ] AC-016: Expansão determinística (mesma entrada → mesma saída)
-- [ ] AC-017: Remoção de arestas funcional (`remove_edge`)
-- [ ] AC-018: Grafo suporta ≥ 100k nós sem degradação
+---
+
+## 2. Acceptance Criteria (AC)
+
+### General
+- [ ] AC-001: Compiles without warnings in `--release`
+- [ ] AC-002: Thread-safe for concurrent reading
+
+### Specific
+- [ ] AC-010: `add_edge(a, b, weight)` creates a bidirectional edge
+- [ ] AC-011: `neighbors(node_id)` returns direct neighbors with weights
+- [ ] AC-012: `expand(nodes, depth)` returns expanded subgraph up to depth `depth`
+- [ ] AC-013: Expansion returns ≤ 2x input nodes
+- [ ] AC-014: No node duplication in the expansion result
+- [ ] AC-015: Expansion latency < 10ms
+- [ ] AC-016: Deterministic expansion (same input → same output)
+- [ ] AC-017: Functional edge removal (`remove_edge`)
+- [ ] AC-018: Graph supports ≥ 100k nodes without degradation
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `add_edge` funcional e testado
-- [ ] `neighbors` consistente com adição/remoção
-- [ ] Expansão determinística implementada
-- [ ] Sem duplicação de nós
-- [ ] Testes unitários ≥ 80% cobertura
-- [ ] Testes funcionais passando
-- [ ] Documentação da API pública
+- [ ] `add_edge` functional and tested
+- [ ] `neighbors` consistent with addition/removal
+- [ ] Deterministic expansion implemented
+- [ ] No node duplication
+- [ ] Unit tests ≥ 80% coverage
+- [ ] Functional tests passing
+- [ ] Public API documentation
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Expansão contextual
-**Entrada:**
+### Contextual expansion
+**Input:**
 ```json
 {
   "seed_nodes": [42, 17, 88],
@@ -54,7 +54,7 @@ O Graph Engine gerencia o grafo semântico do KCE, responsável pela **expansão
 }
 ```
 
-**Saída:**
+**Output:**
 ```json
 {
   "expanded_nodes": [42, 17, 88, 5, 12, 33, 91, 7],
@@ -68,104 +68,104 @@ O Graph Engine gerencia o grafo semântico do KCE, responsável pela **expansão
 }
 ```
 
-### Erro — nó inexistente
+### Error — node does not exist
 ```json
 { "error": "NODE_NOT_FOUND", "message": "Node 9999 does not exist in graph", "code": 404 }
 ```
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Input | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | add_edge bidirecional | `add_edge(1, 2, 0.5)` | `neighbors(1)` contém 2 e vice-versa |
-| UT-002 | neighbors — nó isolado | `neighbors(99)` | `[]` |
-| UT-003 | expand depth=1 | seed=[1], depth=1 | nó 1 + vizinhos diretos |
-| UT-004 | expand sem duplicatas | ciclo 1→2→3→1 | cada nó aparece 1x |
-| UT-005 | remove_edge | `remove_edge(1,2)` | `neighbors(1)` não contém 2 |
-| UT-006 | expand max_nodes | 100 vizinhos, max=5 | exatamente 5 nós |
+| UT-001 | bidirectional add_edge | `add_edge(1, 2, 0.5)` | `neighbors(1)` contains 2 and vice versa |
+| UT-002 | neighbors — isolated node | `neighbors(99)` | `[]` |
+| UT-003 | expand depth=1 | seed=[1], depth=1 | node 1 + direct neighbors |
+| UT-004 | expand without duplicates | cycle 1→2→3→1 | each node appears 1x |
+| UT-005 | remove_edge | `remove_edge(1,2)` | `neighbors(1)` does not contain 2 |
+| UT-006 | expand max_nodes | 100 neighbors, max=5 | exactly 5 nodes |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Nó inexistente | `Err(NodeNotFound)` |
-| UF-002 | Depth negativo | `Err(InvalidDepth)` |
-| UF-003 | Aresta duplicada | Ignora silenciosamente (idempotente) |
+| UF-001 | Node does not exist | `Err(NodeNotFound)` |
+| UF-002 | Negative depth | `Err(InvalidDepth)` |
+| UF-003 | Duplicate edge | Ignores silently (idempotent) |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Criar grafo 1k nós + expandir | Subgrafo correto em < 10ms |
-| FT-002 | Expansão concorrente | 50 expansions simultâneas sem erro |
-| FT-003 | Grafo após persistência | Reload do KineSQL mantém estrutura |
+| FT-001 | Create 1k node graph + expand | Correct subgraph in < 10ms |
+| FT-002 | Concurrent expansion | 50 simultaneous expansions without error |
+| FT-003 | Graph after persistence | KineSQL reload maintains structure |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Retrieval → Graph → ECMA | Candidatos expandidos alimentam ECMA |
-| IT-002 | Graph → KineSQL | Grafo persiste e recupera corretamente |
+| IT-001 | Retrieval → Graph → ECMA | Expanded candidates feed ECMA |
+| IT-002 | Graph → KineSQL | Graph persists and retrieves correctly |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Grafo semântico para expansão contextual de candidatos do Retrieval Engine; permite relações além de similaridade direta.
+**Context:** Semantic graph for contextual expansion of Retrieval Engine candidates; allows relations beyond direct similarity.
 
-**Assumptions:** Grafo é esparso (avg degree < 10); cabe em memória; arestas são bidirecionais com peso; concorrência de leitura é mais frequente que escrita.
+**Assumptions:** Graph is sparse (avg degree < 10); fits in memory; edges are bidirectional with weight; read concurrency is more frequent than write.
 
-**Requirements:** R-001: add/remove_edge | R-002: neighbors O(1) | R-003: expand com profundidade | R-004: ≤ 2x nós de entrada | R-005: latência < 10ms | R-006: determinismo.
+**Requirements:** R-001: add/remove_edge | R-002: neighbors O(1) | R-003: expand with depth | R-004: ≤ 2x input nodes | R-005: latency < 10ms | R-006: determinism.
 
 **Evidence:** `tests/graph_tests.rs` | `benches/graph_bench.rs`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Alvo |
+| Aspect | Target |
 |---------|------|
-| Latência expansão | < 10ms |
-| Memória (100k nós) | < 100MB |
-| Concorrência | 50 leituras simultâneas sem degradação |
+| Expansion latency | < 10ms |
+| Memory (100k nodes) | < 100MB |
+| Concurrency | 50 simultaneous reads without degradation |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** Sem duplicatas em expansão | Determinismo 100% | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Duplicatas no resultado | Latência > 50ms | Crash em concorrência
+**Success:** No duplicates in expansion | 100% determinism | Coverage ≥ 80%  
+**Failure (BLOCKING):** Duplicates in result | Latency > 50ms | Crash in concurrency
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-**Deps internas:** Retrieval Engine (entrada), ECMA (saída), KineSQL (persistência)  
+**Internal deps:** Retrieval Engine (input), ECMA (output), KineSQL (persistence)  
 **Rust:** ≥ 1.75 | **Crates:** `parking_lot` ^0.12
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-002-GRAPH-ENGINE |
-| Código | `src/graph/mod.rs` |
-| Teste | `tests/graph_integration.rs` |
+| Code | `src/graph/mod.rs` |
+| Test | `tests/graph_integration.rs` |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-`add_edge` + `neighbors` | 3+ testes unitários | Estrutura adjacency list
+### MVP (Week 1-2)
+`add_edge` + `neighbors` | 3+ unit tests | Adjacency list structure
 
-### Iteração 1 (Semana 3-4)
-`expand` com profundidade | Deduplicação | `remove_edge` | Determinismo | Benchmark
+### Iteration 1 (Week 3-4)
+`expand` with depth | Deduplication | `remove_edge` | Determinism | Benchmark
 
-### Iteração 2 (Semana 5-6)
-Integração KineSQL (persistência) | Integração Retrieval→Graph→ECMA | Testes de carga | Docs
+### Iteration 2 (Week 5-6)
+KineSQL integration (persistence) | Retrieval→Graph→ECMA integration | Load tests | Docs

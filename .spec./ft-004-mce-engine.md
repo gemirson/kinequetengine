@@ -1,46 +1,46 @@
 # FT-004 — MCE (mRNA Cognitive Engine)
 
-**Módulo:** Core Engine | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-004-MCE-ENGINE | **Atualização:** 2026-05-23
+**Module:** Core Engine | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-004-MCE-ENGINE | **Updated:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O MCE transforma **contexto semântico em instruções executáveis** (mRNA). Recebe nós enriquecidos do ECMA, codifica-os em payloads compactos com intent, prioridade e TTL, e executa a ação correspondente. É o estágio final do pipeline cognitivo — onde conhecimento vira ação.
+MCE transforms **semantic context into executable instructions** (mRNA). It receives enriched nodes from ECMA, encodes them into compact payloads with intent, priority, and TTL, and executes the corresponding action. It is the final stage of the cognitive pipeline — where knowledge turns into action.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: Encoding transforma nós ECMA em struct `mRNA` com `intent`, `priority`, `ttl`, `payload`
-- [ ] AC-011: Redução de payload > 50% vs input bruto
-- [ ] AC-012: Execução de mRNA < 5ms
-- [ ] AC-013: TTL é respeitado — mRNA expirado não executa
-- [ ] AC-014: Prioridade calculada automaticamente baseada em maturidade do nó
-- [ ] AC-015: Consistência de ação: mesma entrada → mesma ação
-- [ ] AC-016: Feedback de resultado retroalimenta ECMA
-- [ ] AC-017: Suporte a múltiplos intents (`risk_eval`, `data_enrich`, `alert`, `classify`)
+- [ ] AC-010: Encoding transforms ECMA nodes into `mRNA` struct with `intent`, `priority`, `ttl`, `payload`
+- [ ] AC-011: Payload reduction > 50% vs raw input
+- [ ] AC-012: mRNA execution < 5ms
+- [ ] AC-013: TTL is respected — expired mRNA does not execute
+- [ ] AC-014: Priority automatically calculated based on node maturity
+- [ ] AC-015: Action consistency: same input → same action
+- [ ] AC-016: Result feedback feeds back to ECMA
+- [ ] AC-017: Support for multiple intents (`risk_eval`, `data_enrich`, `alert`, `classify`)
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Encoding funcional com redução > 50%
-- [ ] Execução funcional < 5ms
-- [ ] TTL aplicado e validado
-- [ ] Prioridade calculada automaticamente
+- [ ] Functional encoding with reduction > 50%
+- [ ] Functional execution < 5ms
+- [ ] TTL applied and validated
+- [ ] Automatically calculated priority
 - [ ] Feedback loop → ECMA
-- [ ] Testes unitários ≥ 80%
-- [ ] Sem `unwrap()` em produção
+- [ ] Unit tests ≥ 80%
+- [ ] No `unwrap()` in production
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Encoding + Execução
+### Encoding + Execution
 
-**Entrada (contexto ECMA):**
+**Input (ECMA context):**
 ```json
 {
   "nodes": [
@@ -50,7 +50,7 @@ O MCE transforma **contexto semântico em instruções executáveis** (mRNA). Re
 }
 ```
 
-**mRNA gerado:**
+**Generated mRNA:**
 ```json
 {
   "intent": "risk_eval",
@@ -63,7 +63,7 @@ O MCE transforma **contexto semântico em instruções executáveis** (mRNA). Re
 }
 ```
 
-**Resultado da execução:**
+**Execution result:**
 ```json
 {
   "action": "risk_eval",
@@ -73,106 +73,106 @@ O MCE transforma **contexto semântico em instruções executáveis** (mRNA). Re
 }
 ```
 
-### Erro — mRNA expirado
+### Error — expired mRNA
 ```json
 { "error": "MRNA_EXPIRED", "message": "TTL exceeded (5000ms)", "code": 408 }
 ```
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Input | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Encoding gera intent correto | context="risk" | `mrna.intent == "risk_eval"` |
+| UT-001 | Encoding generates correct intent | context="risk" | `mrna.intent == "risk_eval"` |
 | UT-002 | Compression ratio > 50% | payload 156 bytes | output < 78 bytes |
-| UT-003 | TTL válido | ttl=5000ms, age=1000ms | executa normalmente |
-| UT-004 | TTL expirado | ttl=100ms, age=200ms | `Err(MrnaExpired)` |
-| UT-005 | Prioridade por maturidade | maturity=0.87 | `priority >= 7` |
-| UT-006 | Determinismo | mesma entrada 2x | mesma saída |
+| UT-003 | Valid TTL | ttl=5000ms, age=1000ms | executes normally |
+| UT-004 | Expired TTL | ttl=100ms, age=200ms | `Err(MrnaExpired)` |
+| UT-005 | Priority by maturity | maturity=0.87 | `priority >= 7` |
+| UT-006 | Determinism | same input 2x | same output |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Nó sem dados | `Err(EmptyPayload)` |
-| UF-002 | Intent desconhecido | `Err(UnknownIntent)` |
+| UF-001 | Node without data | `Err(EmptyPayload)` |
+| UF-002 | Unknown intent | `Err(UnknownIntent)` |
 | UF-003 | TTL = 0 | `Err(InvalidTTL)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Pipeline completo: encode → execute | Ação final correta |
-| FT-002 | Batch de 100 mRNAs | Todos executam < 5ms |
-| FT-003 | mRNA com TTL curto sob carga | Expirados rejeitados corretamente |
+| FT-001 | Full pipeline: encode → execute | Correct final action |
+| FT-002 | Batch of 100 mRNAs | All execute < 5ms |
+| FT-003 | mRNA with short TTL under load | Expired rejected correctly |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | ECMA → MCE | Nós Specialized geram mRNA válido |
-| IT-002 | MCE → ECMA (feedback) | Resultado retroalimenta maturidade |
-| IT-003 | API → MCE | POST /encode + POST /action funcionais |
+| IT-001 | ECMA → MCE | Specialized nodes generate valid mRNA |
+| IT-002 | MCE → ECMA (feedback) | Result feeds back maturity |
+| IT-003 | API → MCE | functional POST /encode + POST /action |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Último estágio do pipeline cognitivo; transforma conhecimento processado em ações executáveis via encoding compacto inspirado em biologia molecular (mRNA).
+**Context:** Last stage of the cognitive pipeline; transforms processed knowledge into executable actions via compact encoding inspired by molecular biology (mRNA).
 
-**Assumptions:** Nós de entrada são validados pelo ECMA; intents são finitos e conhecidos; TTL é definido pelo caller ou calculado por prioridade; execução é síncrona.
+**Assumptions:** Input nodes are validated by ECMA; intents are finite and known; TTL is defined by the caller or calculated by priority; execution is synchronous.
 
-**Requirements:** R-001: Encoding com redução > 50% | R-002: Execução < 5ms | R-003: TTL enforcement | R-004: Priority automática | R-005: Feedback → ECMA | R-006: Determinismo.
+**Requirements:** R-001: Encoding with reduction > 50% | R-002: Execution < 5ms | R-003: TTL enforcement | R-004: Automatic priority | R-005: Feedback → ECMA | R-006: Determinism.
 
 **Evidence:** `tests/mce_tests.rs` | `benches/mce_bench.rs`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Alvo |
+| Aspect | Target |
 |---------|------|
-| Latência encoding | < 2ms |
-| Latência execução | < 5ms |
+| Encoding latency | < 2ms |
+| Execution latency | < 5ms |
 | Compression ratio | > 50% |
 | Throughput | ≥ 1000 mRNA/s |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** Compression > 50% | Execução < 5ms | Determinismo 100% | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Compression < 30% | Execução > 20ms | Ação inconsistente para mesma entrada
+**Success:** Compression > 50% | Execution < 5ms | 100% determinism | Coverage ≥ 80%  
+**Failure (BLOCKING):** Compression < 30% | Execution > 20ms | Inconsistent action for same input
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-**Deps internas:** ECMA (entrada), KineSQL (persistência resultado), API (endpoints /encode, /action)  
+**Internal deps:** ECMA (input), KineSQL (result persistence), API (/encode, /action endpoints)  
 **Rust:** ≥ 1.75
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-004-MCE-ENGINE |
-| Código | `src/mce/mod.rs` |
-| Teste | `tests/mce_integration.rs` |
+| Code | `src/mce/mod.rs` |
+| Test | `tests/mce_integration.rs` |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-Encoding básico | Execução síncrona | 1 intent (`risk_eval`) | 5+ testes
+### MVP (Week 1-2)
+Basic encoding | Synchronous execution | 1 intent (`risk_eval`) | 5+ tests
 
-### Iteração 1 (Semana 3-4)
-TTL enforcement | Priority automática | Múltiplos intents | Compression otimizada | Benchmark
+### Iteration 1 (Week 3-4)
+TTL enforcement | Automatic priority | Multiple intents | Optimized compression | Benchmark
 
-### Iteração 2 (Semana 5-6)
-Feedback loop ECMA | Integração API | Batch execution | Testes de carga | Docs
+### Iteration 2 (Week 5-6)
+ECMA feedback loop | API integration | Batch execution | Load tests | Docs

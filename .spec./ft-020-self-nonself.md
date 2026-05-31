@@ -1,49 +1,49 @@
 # FT-020 — Self vs Non-Self Context Classifier
 
-**Módulo:** AIS (Artificial Immune System) | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-020-SELF-NONSELF | **Atualização:** 2026-05-23
+**Module:** AIS (Artificial Immune System) | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-020-SELF-NONSELF | **Update:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O Self vs Non-Self Classifier **separa contexto confiável (self) de contexto externo/suspeito (non-self)** usando classificação binária + probabilística. Inspirado na capacidade do sistema imunológico de distinguir células próprias de invasores. Fornece segurança adaptativa sem regras fixas — o sistema aprende o que é "self" a partir do comportamento normal.
+The Self vs Non-Self Classifier **separates trustworthy context (self) from external/suspicious context (non-self)** using binary + probabilistic classification. Inspired by the immune system's ability to distinguish its own cells from invaders. Provides adaptive safety without fixed rules — the system learns “self” from normal behavior.
 
-### Valor
-- Segurança sem regras fixas — aprende padrões confiáveis
-- Classificação probabilística (não binária absoluta)
-- Adaptação contínua a novos padrões legítimos
+### Value
+- Security without fixed rules — learns reliable patterns
+- Probabilistic classification (absolute non-binary)
+- Continuous adaptation to new legitimate standards
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: `classify(input)` retorna `Classification { label: Self|NonSelf, confidence: f64, features: Vec<FeatureScore> }`
-- [ ] AC-011: Self profile construído via negative selection algorithm (NSA)
-- [ ] AC-012: Classificação probabilística (confidence 0.0..1.0), não apenas binária
-- [ ] AC-013: Self profile atualizado incrementalmente com novos padrões válidos
-- [ ] AC-014: Non-self threshold configurável (default: 0.6)
-- [ ] AC-015: Features monitoradas: vector distribution, temporal pattern, tenant behavior, API usage
-- [ ] AC-016: Classificação < 2ms por request
-- [ ] AC-017: Self profile persistido no KineSQL
-- [ ] AC-018: Integração com Immune Detection (FT-017) para cross-validation
+- [ ] AC-010: `classify(input)` returns `Classification { label: Self|NonSelf, confidence: f64, features: Vec<FeatureScore> }`
+- [ ] AC-011: Self profile constructed via negative selection algorithm (NSA)
+- [ ] AC-012: Probabilistic classification (confidence 0.0..1.0), not just binary
+- [ ] AC-013: Self profile incrementally updated with new valid defaults
+- [ ] AC-014: Non-self threshold configurable (default: 0.6)
+- [ ] AC-015: Monitored features: vector distribution, temporal pattern, tenant behavior, API usage
+- [ ] AC-016: Rating < 2ms per request
+- [ ] AC-017: Self profile persisted in KineSQL
+- [ ] AC-018: Integration with Immune Detection (FT-017) for cross-validation
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Negative selection algorithm implementado
-- [ ] Self profile com aprendizado incremental
-- [ ] Classificação probabilística funcional
-- [ ] Persistência KineSQL
-- [ ] Integração FT-017
-- [ ] Cobertura ≥ 80%
+- [ ] Negative selection algorithm implemented
+- [ ] Self profile with incremental learning
+- [ ] Functional probabilistic classification
+- [ ] KineSQL Persistence
+- [ ] FT-017 Integration
+- [ ] Coverage ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Classificação Self
+### Self Classification
 ```json
 {
   "input": { "vector": [0.12, 0.85, 0.33], "tenant": "bank_01", "hour": 14, "endpoint": "/query" },
@@ -59,7 +59,7 @@ O Self vs Non-Self Classifier **separa contexto confiável (self) de contexto ex
 }
 ```
 
-### Classificação Non-Self
+### Non-Self Classification
 ```json
 {
   "input": { "vector": [0.99, 0.01, 0.99], "tenant": "bank_01", "hour": 3, "endpoint": "/action" },
@@ -78,68 +78,68 @@ O Self vs Non-Self Classifier **separa contexto confiável (self) de contexto ex
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | Input normal → Self | `label: SELF`, confidence > 0.8 |
-| UT-002 | Input anômalo → Non-Self | `label: NON_SELF`, confidence > 0.6 |
-| UT-003 | Confidence range | sempre 0.0..1.0 |
-| UT-004 | Self profile update | novo padrão válido incorporado |
-| UT-005 | NSA — detectors gerados | detectors não matcheiam self |
+| UT-001 | Normal Input → Self | `label: SELF`, confidence > 0.8 |
+| UT-002 | Anomalous Input → Non-Self | `label: NON_SELF`, confidence > 0.6 |
+| UT-003 | Confidence range | always 0.0..1.0 |
+| UT-004 | Self profile update | new valid standard incorporated |
+| UT-005 | NSA — generated detectors | detectors don't match self |
 | UT-006 | Threshold edge case | score = threshold → configurable |
-| UT-007 | Multi-feature scoring | scores por feature corretos |
+| UT-007 | Multi-feature scoring | correct feature scores |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Self profile vazio | `Err(NoSelfProfile)` |
-| UF-002 | Input com dims incompatíveis | `Err(DimensionMismatch)` |
+| UF-001 | Empty self profile | `Err(NoSelfProfile)` |
+| UF-002 | Input with incompatible dims | `Err(DimensionMismatch)` |
 | UF-003 | Threshold > 1.0 | `Err(InvalidThreshold)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado |
+| ID | Scenario | Result |
 |----|---------|-----------|
 | FT-001 | 1000 self + 50 non-self | Accuracy > 90% |
-| FT-002 | Self profile evolui | Novos padrões legítimos aceitos |
-| FT-003 | Classificação inline | Overhead < 2ms |
+| FT-002 | Self profile evolves | New legitimate accepted standards |
+| FT-003 | Inline sorting | Overhead < 2ms |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Classifier → Detection (FT-017) | Non-self escalado para detecção |
-| IT-002 | Classifier → Pipeline | Pipeline adapta fluxo por classificação |
-| IT-003 | Classifier → KineSQL | Self profile persiste |
+| IT-001 | Classifier → Detection (FT-017) | Non-self scaled for detection |
+| IT-002 | Classifier → Pipeline | Pipeline adapts flow by classification |
+| IT-003 | Classifier → KineSQL | Self profile persists |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Regras de segurança fixas são frágeis. O classificador Self/Non-Self aprende automaticamente padrões confiáveis e identifica contexto externo/suspeito de forma probabilística, adaptando-se continuamente.
+**Context:** Fixed security rules are fragile. The Self/Non-Self classifier automatically learns reliable patterns and identifies external/suspicious context probabilistically, continuously adapting.
 
-**Assumptions:** Negative Selection Algorithm é adequado para MVP; self profile construído em warm-up (1000+ samples); classificação é probabilística; features são independentes; self evolui incrementalmente.
+**Assumptions:** Negative Selection Algorithm is suitable for MVP; self profile built in warm-up (1000+ samples); classification is probabilistic; features are independent; self evolves incrementally.
 
-**Requirements:** R-001: classify() probabilístico | R-002: NSA para self profile | R-003: Incremental learning | R-004: < 2ms | R-005: Persistência | R-006: Multi-feature | R-007: Integração FT-017.
+**Requirements:** R-001: probabilistic classify() | R-002: NSA for self profile | R-003: Incremental learning | R-004: < 2ms | R-005: Persistence | R-006: Multi-feature | R-007: FT-017 Integration.
 
 **Evidence:** `tests/self_nonself_tests.rs` | `reports/classifier_accuracy.md`
 
 ---
 
-## 7–11. (Resumo)
+## 7–11. (Summary)
 
-**Não funcionais:** Classificação < 2ms | Accuracy > 90% | Memória self profile < 20MB  
-**Qualidade:** Accuracy > 90% | 0 false negatives para ameaças conhecidas | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Accuracy < 75% | Overhead > 10ms | Self profile corrompe  
+**Non-functional:** Rating < 2ms | Accuracy > 90% | Self profile memory < 20MB  
+**Quality:** Accuracy > 90% | 0 false negatives for known threats | Coverage ≥ 80%  
+**Failure (BLOCKING):** Accuracy < 75% | Overhead > 10ms | Self profile corrupts  
 **Deps:** Detection (FT-017), KineSQL (FT-005), Pipeline (FT-011)  
-**Rastreabilidade:** FT-020-SELF-NONSELF | `src/ais/classifier.rs`
+**Traceability:** FT-020-SELF-NONSELF | `src/ais/classifier.rs`
 
-**Roadmap:** MVP: classify() com threshold fixo + euclidean distance | Iter1: NSA + multi-feature + incremental | Iter2: Persistência + integração + accuracy tuning
+**Roadmap:** MVP: classify() with fixed threshold + euclidean distance | Iter1: NSA + multi-feature + incremental | Iter2: Persistence + integration + accuracy tuning
 
 ---
 
-*Documento gerado em 2026-05-23 — KineContext Engine Product Specification*
+*Document generated on 2026-05-23 — KineContext Engine Product Specification*

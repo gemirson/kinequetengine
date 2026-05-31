@@ -1,50 +1,50 @@
 # FT-030 — Distributed Consensus (Raft-Lite & CRDTs)
 
-**Módulo:** Infraestrutura | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-030-DISTRIBUTED-CONSENSUS | **Atualização:** 2026-05-30
+**Module:** Infrastructure | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-030-DISTRIBUTED-CONSENSUS | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-Sistemas distribuídos eficientes exigem um equilíbrio entre performance e consistência de dados. Tentar impor consistência forte em todas as operações de busca e telemetria vetorial degrada severamente a latência. Esta especificação define o **Consenso Híbrido** do KCE:
-1. **Consistência Eventual (via CRDTs)** no caminho quente de dados (feromônios, conexões semânticas, logs de anomalia) para garantir respostas rápidas.
-2. **Consistência Forte (via Raft-Lite)** no caminho de controle (configurações de tenants, chaves de acesso, atribuições fixas de shards e tabela de membros do cluster) para garantir integridade.
+Efficient distributed systems require a balance between performance and data consistency. Attempting to enforce strong consistency across all search and vector telemetry operations severely degrades latency. This specification defines the KCE **Hybrid Consensus**:
+1. **Eventual Consistency (via CRDTs)** in the hot data path (pheromones, semantic connections, anomaly logs) to ensure fast responses.
+2. **Strong Consistency (via Raft-Lite)** in control path (tenant configurations, access keys, fixed shard assignments and cluster member table) to ensure integrity.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compilação limpa em Rust.
-- [ ] AC-002: Sem contenção de bloqueios globais nos caminhos de CRDT.
-- [ ] AC-003: Tratamento de partições de rede com resolução determinística de conflitos.
+### General
+- [ ] AC-001: Clean build in Rust.
+- [ ] AC-002: No global lock contention on CRDT paths.
+- [ ] AC-003: Treatment of network partitions with deterministic conflict resolution.
 
-### Específicos
-- [ ] AC-010: Implementação de CRDTs do tipo *State-based* e *Delta-based* para sincronização eventual de grafos cognitivos e intensidades de feromônios.
-- [ ] AC-011: Resolução de conflitos LWW-Element-Graph (Last-Write-Wins) baseada em watermarks temporais causais com tiebreaker determinístico por ID do nó.
-- [ ] AC-012: O protocolo **Raft-Lite** deve gerenciar a eleição de líder e replicação de logs com quorum simples ($N/2 + 1$) para escrita de configurações críticas.
-- [ ] AC-013: Escrita persistente do log do Raft-Lite no KineSQL WAL (FT-005) antes da confirmação da transação de controle (Commit atômico distribuído).
-- [ ] AC-014: Detecção automática de perda de líder Raft-Lite e re-eleição em menos de 1,5 segundos.
-- [ ] AC-015: Sincronização e reintegração automática de nós recuperados após partição de rede, aplicando deltas em background.
+### Specifics
+- [ ] AC-010: Implementation of *State-based* and *Delta-based* CRDTs for eventual synchronization of cognitive graphs and pheromone intensities.
+- [ ] AC-011: LWW-Element-Graph (Last-Write-Wins) conflict resolution based on causal temporal watermarks with deterministic tiebreaker by node ID.
+- [ ] AC-012: The **Raft-Lite** protocol must manage leader election and log replication with simple quorum ($N/2 + 1$) for writing critical configurations.
+- [ ] AC-013: Persistent writing of Raft-Lite log in KineSQL WAL (FT-005) before control transaction commit (Distributed Atomic Commit).
+- [ ] AC-014: Automatic detection of Raft-Lite leader loss and re-election in less than 1.5 seconds.
+- [ ] AC-015: Synchronization and automatic reintegration of nodes recovered after network partition, applying deltas in the background.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Implementação de estruturas de CRDT (`CrdtGraph` e `CrdtPheromones`).
-- [ ] Implementação da máquina de estados finitamente regulada para o protocolo Raft-Lite.
-- [ ] Testes automatizados de eleição sob cenários de queda de nós em clusters de 3 e 5 nós.
-- [ ] Integração com o KineSQL para gravação de logs de transação.
-- [ ] Cobertura de testes unitários superior a 80%.
+- [ ] Implementation of CRDT structures (`CrdtGraph` and `CrdtPheromones`).
+- [ ] Finitely regulated state machine implementation for the Raft-Lite protocol.
+- [ ] Automated election testing under node outage scenarios in 3- and 5-node clusters.
+- [ ] Integration with KineSQL for recording transaction logs.
+- [ ] Unit test coverage greater than 80%.
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Mensagem de Proposta do Raft-Lite (JSON)
+### Raft-Lite Proposal Message (JSON)
 
-**Proposta de inserção de novo tenant enviada pelo líder:**
+**Proposal for insertion of a new tenant sent by the leader:**
 ```json
 {
   "term": 3,
@@ -63,9 +63,9 @@ Sistemas distribuídos eficientes exigem um equilíbrio entre performance e cons
 }
 ```
 
-### Resposta de Resolução de Conflitos CRDT (Graph Delta)
+### CRDT Conflict Resolution Response (Graph Delta)
 
-**Resultado de merge determinístico de grafos concorrentes:**
+**Deterministic merge result of competing graphs:**
 ```json
 {
   "merged_nodes": 12,
@@ -79,93 +79,93 @@ Sistemas distribuídos eficientes exigem um equilíbrio entre performance e cons
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Merge CRDT Pheromones | Local $\tau=1.5$, Remoto $\tau=2.5$ | Convergência matemática determinística |
-| UT-002 | LWW-Element-Graph tiebreaker | Timestamps idênticos, IDs diferentes | O nó com maior ID alfanumérico vence |
-| UT-003 | Raft-Lite Eleição Inicial | 3 nós ativos, sem líder | Um nó declara candidatura e recebe votos majoritários |
-| UT-004 | Rejeição de Log Menor | Líder com termo desatualizado envia log | Retorna erro; proposta rejeitada |
+| UT-001 | Merge CRDT Pheromones | Local $\tau=1.5$, Remote $\tau=2.5$ | Deterministic mathematical convergence |
+| UT-002 | LWW-Element-Graph tiebreaker | Identical timestamps, different IDs | The node with the highest alphanumeric ID wins |
+| UT-003 | Raft-Lite Initial Election | 3 active nodes, no leader | A node declares candidacy and receives majority votes |
+| UT-004 | Minor Log Rejection | Leader with outdated term sends log | Returns error; proposal rejected |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Partição de Rede Simulada | Split-brain clássico: a partição minoritária (2 nós de um cluster de 5) bloqueia escritas fortes, enquanto a majoritária (3 nós) elege novo líder e mantém as operações ativas |
-| FT-002 | Sincronização em Lote | Um nó offline por 5 minutos recebe apenas a diferença incremental de grafos e feromônios, recuperando o alinhamento com a malha |
+| FT-001 | Simulated Network Partition | Classic split-brain: the minority partition (2 nodes of a cluster of 5) blocks strong writes, while the majority (3 nodes) elects a new leader and keeps operations active |
+| FT-002 | Batch Sync | A node offline for 5 minutes receives only the incremental difference of graphs and pheromones, recovering alignment with the mesh |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Raft-Lite → KineSQL (FT-005) | Logs do Raft são gravados e descarregados fisicamente com fsync |
-| IT-002 | CRDT → Graph (FT-002) | Nós e arestas do grafo semântico são instanciados e sincronizados via CRDT |
+| IT-001 | Raft-Lite → KineSQL (FT-005) | Raft logs are physically written and downloaded with fsync |
+| IT-002 | CRDT → Graph (FT-002) | Nodes and edges of the semantic graph are instantiated and synchronized via CRDT |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Consistência e integridade transacional de dados e metadados no KCE operando em ambientes multi-nós sujeitos a instabilidades de infraestrutura de nuvem.
+**Context:** Consistency and transactional integrity of data and metadata in KCE operating in multi-node environments subject to cloud infrastructure instabilities.
 
-**Assumptions:** A maioria dos nós do cluster ($N/2 + 1$) está online e acessível. Relógios de hardware dos servidores são razoavelmente sincronizados via NTP.
+**Assumptions:** The majority of cluster nodes ($N/2 + 1$) are online and reachable. Server hardware clocks are reasonably synchronized via NTP.
 
-**Requirements:** R-001: Consenso Raft-Lite para controle | R-002: Consistência eventual CRDT para dados quentes | R-003: Persistência no KineSQL WAL.
+**Requirements:** R-001: Raft-Lite Consensus for Control | R-002: CRDT eventual consistency for hot data | R-003: Persistence in KineSQL WAL.
 
-**Evidence:** Execução de testes de caos de rede Jepsen simplificados validando linearidade para escritas e convergência final para dados.
+**Evidence:** Execution of simplified Jepsen network chaos tests validating linearity for writes and final convergence for data.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Overhead de Merge CRDT | Tempo para mesclar estados de grafos de 10k nós | < 5ms |
-| Latência de Eleição Raft | Tempo para eleger novo líder | < 1.5s |
-| Tamanho do Log Raft-Lite | Compactação e expurgo periódico de logs confirmados | Limite de 50MB antes do snapshot |
+| CRDT Merge Overhead | Time to merge states of 10k node graphs | < 5ms |
+| Raft Election Latency | Time to elect new leader | < 1.5s |
+| Raft-Lite Log Size | Periodic compression and purging of committed logs | 50MB limit before snapshot |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:**
-- 100% de convergência determinística de grafos em todos os cenários de recuperação de partições de rede.
-- Zero ocorrências de split-brain persistente após resolução da partição física.
-- Cobertura de testes unitários superior a 80%.
+**Success:**
+- 100% deterministic graph convergence in all network partition recovery scenarios.
+- Zero occurrences of persistent split-brain after physical partition resolution.
+- Unit test coverage greater than 80%.
 
-**Falha (BLOQUEANTE):**
-- Perda de linearidade nas escritas fortes (ex: dois líderes aceitando escritas simultâneas no mesmo termo).
-- Corrupção do grafo semântico por falha no merge de CRDT.
+**Failure (BLOCKING):**
+- Loss of linearity in strong writes (e.g. two leaders accepting simultaneous writes in the same term).
+- Corruption of the semantic graph due to CRDT merge failure.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `parking_lot` | ^0.12 | Locks concorrentes rápidos |
-| `serde` | ^1.0 | Serialização de mensagens e estados |
+| `parking_lot` | ^0.12 | Fast concurrent locks |
+| `serde` | ^1.0 | Serialization of messages and states |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-030-DISTRIBUTED-CONSENSUS | Esta especificação |
+| Spec | FT-030-DISTRIBUTED-CONSENSUS | This specification |
 | Design | `docs/kce_distributed_architecture.md` | Distributed Consensus Design |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase 1)
-Consistência eventual simples baseada em Last-Write-Wins puramente em memória. Sem suporte a eleições automáticas.
+### MVP (Phase 1)
+Simple eventual consistency based on purely in-memory Last-Write-Wins. No support for automatic elections.
 
-### Iteração 1 (Fase 2)
-Implementação completa da máquina de estados do Raft-Lite com eleição de líder e quorum. Gravação das configurações dos Tenants e Shards persistida no KineSQL.
+### Iteration 1 (Phase 2)
+Full implementation of the Raft-Lite state machine with leader and quorum election. Saving Tenants and Shards configurations persisted in KineSQL.
 
-### Iteração 2 (Fase 3)
-Sincronização delta-based otimizada de CRDTs com compressão de payloads e integração total com as hipermutações controladas do AIS.
+### Iteration 2 (Phase 3)
+Optimized delta-based synchronization of CRDTs with payload compression and full integration with AIS controlled hypermutations.

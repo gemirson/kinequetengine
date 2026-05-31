@@ -1,59 +1,59 @@
 # FT-013 — Pheromone Routing Engine (ACO Core)
 
-**Módulo:** ACO (Ant Colony Optimization) | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-013-PHEROMONE-ROUTING | **Atualização:** 2026-05-23
+**Module:** ACO (Ant Colony Optimization) | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-013-PHEROMONE-ROUTING | **Update:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O Pheromone Routing Engine é o **núcleo do sistema ACO** do KCE. Cada interação (query, retrieval, execução) deposita um `pheromone_score` no caminho percorrido no grafo semântico. Caminhos mais usados e mais eficientes acumulam feromônio e se tornam preferenciais para futuras buscas. Substitui heurística estática por **aprendizado emergente** — o sistema aprende quais rotas de contexto são mais valiosas sem regras codificadas.
+The Pheromone Routing Engine is the core of KCE's ACO system. Each interaction (query, retrieval, execution) deposits a `pheromone_score` on the path taken in the semantic graph. More used and more efficient paths accumulate pheromone and become preferred for future searches. Replaces static heuristics with **emergent learning** — the system learns which context routes are most valuable without hard-coded rules.
 
-### Valor
-- Substitui heurística estática por aprendizado emergente
-- Rotas de contexto se auto-otimizam com uso
-- Comportamento melhora organicamente sem retraining
+### Value
+- Replaces static heuristics with emergent learning
+- Context routes self-optimize with use
+- Behavior improves organically without retraining
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compila sem warnings em `--release`
+### General
+- [ ] AC-001: Compiles without warnings in `--release`
 - [ ] AC-002: Thread-safe via `Arc<RwLock<...>>`
-- [ ] AC-003: Interface pública com doc comments
+- [ ] AC-003: Public interface with doc comments
 
-### Específicos
-- [ ] AC-010: Cada aresta do grafo possui campo `pheromone_score: f64` (inicializado em `1.0`)
-- [ ] AC-011: `deposit(edge, score)` incrementa feromônio proporcionalmente ao sucesso da query
-- [ ] AC-012: `route(source, target)` seleciona caminho com probabilidade proporcional ao feromônio
-- [ ] AC-013: Seleção probabilística segue fórmula ACO: `P(edge) = τ^α * η^β / Σ(τ^α * η^β)` onde τ=feromônio, η=heurística
-- [ ] AC-014: Parâmetros `α` (peso feromônio) e `β` (peso heurística) configuráveis
-- [ ] AC-015: Feromônio máximo (`τ_max`) e mínimo (`τ_min`) para evitar estagnação (MMAS — Max-Min Ant System)
-- [ ] AC-016: Depósito é proporcional à qualidade do resultado (`1/latency` ou `recall_score`)
-- [ ] AC-017: Histórico de depósitos rastreável para auditoria
-- [ ] AC-018: Integração com Graph Engine (FT-002) para rotas
+### Specifics
+- [ ] AC-010: Each edge of the graph has a `pheromone_score: f64` field (initialized in `1.0`)
+- [ ] AC-011: `deposit(edge, score)` increases pheromone proportionally to the success of the query
+- [ ] AC-012: `route(source, target)` selects path with probability proportional to pheromone
+- [ ] AC-013: Probabilistic selection follows ACO formula: `P(edge) = τ^α * η^β / Σ(τ^α * η^β)` where τ=pheromone, η=heuristic
+- [ ] AC-014: Parameters `α` (pheromone weight) and `β` (heuristic weight) configurable
+- [ ] AC-015: Maximum (`τ_max`) and minimum (`τ_min`) pheromone to avoid stagnation (MMAS — Max-Min Ant System)
+- [ ] AC-016: Deposit is proportional to the quality of the result (`1/latency` or `recall_score`)
+- [ ] AC-017: Deposit history traceable for audit
+- [ ] AC-018: Integration with Graph Engine (FT-002) for routes
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `deposit(edge, score)` implementado e testado
-- [ ] `route(source, target)` com seleção probabilística ACO
-- [ ] Fórmula ACO implementada com α, β configuráveis
-- [ ] Limites τ_max / τ_min ativos (MMAS)
-- [ ] Integração com Graph Engine funcional
-- [ ] Testes unitários ≥ 80% cobertura
-- [ ] Benchmark de convergência registrado
-- [ ] Sem `unwrap()` em código de produção
+- [ ] `deposit(edge, score)` implemented and tested
+- [ ] `route(source, target)` with ACO probabilistic selection
+- [ ] ACO formula implemented with configurable α, β
+- [ ] Active τ_max / τ_min limits (MMAS)
+- [ ] Integration with functional Graph Engine
+- [ ] Unit tests ≥ 80% coverage
+- [ ] Registered Convergence Benchmark
+- [ ] No `unwrap()` in production code
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Depósito de feromônio após query bem-sucedida
+### Pheromone deposit after successful query
 
-**Entrada (evento de depósito):**
+**Entry (deposit event):**
 ```json
 {
   "path": [
@@ -67,7 +67,7 @@ O Pheromone Routing Engine é o **núcleo do sistema ACO** do KCE. Cada interaç
 }
 ```
 
-**Estado após depósito:**
+**Status after deposit:**
 ```json
 {
   "edges_updated": [
@@ -79,9 +79,9 @@ O Pheromone Routing Engine é o **núcleo do sistema ACO** do KCE. Cada interaç
 }
 ```
 
-### Seleção de rota por feromônio
+### Pheromone route selection
 
-**Entrada:**
+**Prohibited:**
 ```json
 {
   "source_node": 42,
@@ -92,7 +92,7 @@ O Pheromone Routing Engine é o **núcleo do sistema ACO** do KCE. Cada interaç
 }
 ```
 
-**Saída (rotas candidatas com probabilidade):**
+**Output (candidate routes with probability):**
 ```json
 {
   "routes": [
@@ -105,203 +105,203 @@ O Pheromone Routing Engine é o **núcleo do sistema ACO** do KCE. Cada interaç
 }
 ```
 
-### Erro — nós desconectados
+### Error — nodes disconnected
 ```json
 { "error": "NO_ROUTE", "message": "No path between node 42 and node 999", "code": 404 }
 ```
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Prohibited | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Depósito incrementa feromônio | deposit(edge, 0.5) | pheromone += 0.5 |
-| UT-002 | Feromônio inicial = 1.0 | nova aresta | `pheromone == 1.0` |
-| UT-003 | τ_max respeitado | depósitos excessivos | `pheromone <= τ_max` |
-| UT-004 | τ_min respeitado | após evaporação | `pheromone >= τ_min` |
-| UT-005 | Seleção probabilística | 2 rotas, τ=[5.0, 1.0] | rota 1 selecionada ~83% (α=1, β=0) |
-| UT-006 | α=0 ignora feromônio | qualquer τ | seleção uniforme |
-| UT-007 | Rota determinística seed | seed fixo | mesma rota sempre |
-| UT-008 | Deposit quality_proportional | score=0.9 | delta proporcional |
+| UT-001 | Deposit increases pheromone | deposit(edge, 0.5) | pheromone += 0.5 |
+| UT-002 | Initial pheromone = 1.0 | new edge | `pheromone == 1.0` |
+| UT-003 | τ_max respected | excessive deposits | `pheromone <= τ_max` |
+| UT-004 | τ_min respected | after evaporation | `pheromone >= τ_min` |
+| UT-005 | Probabilistic selection | 2 routes, τ=[5.0, 1.0] | route 1 selected ~83% (α=1, β=0) |
+| UT-006 | α=0 ignores pheromone | any τ | uniform selection |
+| UT-007 | Seed deterministic route | fixed seed | same route always |
+| UT-008 | Deposit quality_proportional | score=0.9 | proportional delta |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Nós desconectados | `Err(NoRoute)` |
-| UF-002 | Score negativo | `Err(InvalidScore)` |
-| UF-003 | α ou β negativos | `Err(InvalidParams)` |
-| UF-004 | Edge inexistente | `Err(EdgeNotFound)` |
+| UF-001 | We disconnected | `Err(NoRoute)` |
+| UF-002 | Negative score | `Err(InvalidScore)` |
+| UF-003 | negative α or β | `Err(InvalidParams)` |
+| UF-004 | Non-existent Edge | `Err(EdgeNotFound)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | 100 queries na mesma rota | Feromônio acumula, rota se torna dominante |
-| FT-002 | Rotas alternativas sob carga | Rota melhor converge para >60% seleção |
-| FT-003 | Integração com pipeline | Pipeline usa rota ACO ao invés de fixed |
-| FT-004 | Concorrência de depósitos | 50 depósitos simultâneos sem corrupção |
+| FT-001 | 100 queries on the same route | Pheromone accumulates, route becomes dominant |
+| FT-002 | Alternative routes under load | Best route converges for >60% selection |
+| FT-003 | Pipeline integration | Pipeline uses ACO route instead of fixed |
+| FT-004 | Deposit concurrency | 50 simultaneous deposits without corruption |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Pheromone → Graph Engine | Depósitos refletem no grafo |
-| IT-002 | Pipeline → Pheromone → Retrieval | Retrieval usa rotas pheromone-weighted |
-| IT-003 | Pheromone → KineSQL | Scores persistem após restart |
-| IT-004 | Pheromone → Evaporation (FT-014) | Evaporação reduz scores corretamente |
+| IT-001 | Pheromone → Graph Engine | Deposits reflect in the graph |
+| IT-002 | Pipeline → Pheromone → Retrieval | Retrieval uses pheromone-weighted routes |
+| IT-003 | Pheromone → KineSQL | Scores persist after restart |
+| IT-004 | Pheromone → Evaporation (FT-014) | Evaporation correctly reduces scores |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** O KCE utiliza heurísticas estáticas para routing de contexto. O Pheromone Routing substitui isso por aprendizado emergente inspirado em colônias de formigas (ACO). Cada interação deposita feromônio digital nos caminhos do grafo, fazendo com que rotas mais eficientes se reforcem naturalmente.
+**Context:** KCE uses static heuristics for context routing. Pheromone Routing replaces this with ant colony-inspired emergent learning (ACO). Each interaction deposits digital pheromone on the graph's paths, causing more efficient routes to naturally reinforce themselves.
 
 **Assumptions:**
-- O grafo semântico (FT-002) já existe e suporta pesos em arestas
-- Feromônio é um float f64 com limites configuráveis
-- Seleção probabilística usa roulette wheel selection
-- Concorrência de depósitos é gerenciada via RwLock
-- α e β default são 1.0 e 2.0 respectivamente (ACO clássico)
+- The semantic graph (FT-002) already exists and supports weights on edges
+- Pheromone is an f64 float with configurable limits
+- Probabilistic selection uses roulette wheel selection
+- Deposit concurrency is managed via RwLock
+- α and β default are 1.0 and 2.0 respectively (classic ACO)
 
 **Requirements:**
-- R-001: Depósito de feromônio proporcional à qualidade
-- R-002: Seleção probabilística ACO (P = τ^α * η^β / Σ)
-- R-003: MMAS — limites τ_max, τ_min
-- R-004: Parâmetros α, β configuráveis
-- R-005: Integração com Graph Engine
-- R-006: Persistência via KineSQL
-- R-007: Thread-safe para depósitos concorrentes
+- R-001: Pheromone deposit proportional to quality
+- R-002: ACO probabilistic selection (P = τ^α * η^β / Σ)
+- R-003: MMAS — limits τ_max, τ_min
+- R-004: Configurable α, β parameters
+- R-005: Integration with Graph Engine
+- R-006: Persistence via KineSQL
+- R-007: Thread-safe for concurrent deposits
 
 **Evidence:**
-- `benches/pheromone_convergence.rs` — benchmark de convergência
-- `tests/pheromone_routing_tests.rs` — testes unitários
-- `reports/aco_analysis.md` — análise de convergência vs heurística estática
+- `benches/pheromone_convergence.rs` — convergence benchmark
+- `tests/pheromone_routing_tests.rs` — unit tests
+- `reports/aco_analysis.md` — convergence analysis vs static heuristics
 
 ---
 
-## 7. Critérios de Aceitação Não Funcionais
+## 7. Non-Functional Acceptance Criteria
 
-### Desempenho
-| Métrica | Alvo | Método |
+### Performance
+| Metric | Target | Method |
 |---------|------|--------|
-| Latência deposit | < 0.5ms | Benchmark |
-| Latência route selection | < 5ms | Benchmark |
-| Convergência | < 50 iterações para rota ótima | Dataset sintético |
+| Deposit latency | < 0.5ms | Benchmark |
+| Route selection latency | < 5ms | Benchmark |
+| Convergence | < 50 iterations for optimal route | Synthetic dataset |
 | Throughput deposits | ≥ 5000/s | `wrk` |
 
-### Segurança
-- Scores validados (não-negativos, não-NaN)
-- Limites τ_max/τ_min impedem manipulação
-- Audit trail de depósitos
+### Security
+- Validated scores (non-negative, non-NaN)
+- τ_max/τ_min limits prevent manipulation
+- Deposit audit trail
 
-### Acessibilidade
-- N/A (módulo backend)
+### Accessibility
+- N/A (backend module)
 
 ---
 
-## 8. Critérios de Qualidade e Métricas
+## 8. Quality Criteria and Metrics
 
-### Métricas de Sucesso
-| Métrica | Valor Alvo |
+### Success Metrics
+| Metric | Target Value |
 |---------|------------|
-| Melhoria de recall vs estático | ≥ 10% |
-| Convergência para rota ótima | < 50 iterações |
-| Taxa de exploração mantida | ≥ 15% (não fica preso) |
-| Cobertura de testes | ≥ 80% |
+| Recall improvement vs static | ≥ 10% |
+| Convergence to optimal route | < 50 iterations |
+| Exploration rate maintained | ≥ 15% (does not get stuck) |
+| Test coverage | ≥ 80% |
 
-### Critérios de Falha
-- Convergência > 200 iterações → **BLOQUEANTE**
-- Feromônio fora de [τ_min, τ_max] → **BLOQUEANTE**
-- Stagnation (0% exploração) → **BLOQUEANTE**
-- Corrupção em depósito concorrente → **BLOQUEANTE**
+### Failure Criteria
+- Convergence > 200 iterations → **BLOCKING**
+- Pheromone outside [τ_min, τ_max] → **BLOCKING**
+- Stagnation (0% exploration) → **BLOCKING**
+- Corruption in competing deposit → **BLOCKING**
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-### Dependências Diretas
-| Crate | Versão | Propósito |
+### Direct Dependencies
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `rand` | ^0.8 | Seleção probabilística |
-| `parking_lot` | ^0.12 | RwLock otimizado |
+| `rand` | ^0.8 | Probabilistic selection |
+| `parking_lot` | ^0.12 | Optimized RwLock |
 
-### Dependências Internas
-- **Graph Engine (FT-002):** estrutura de arestas para depósito
-- **Evaporation (FT-014):** decaimento de feromônio
-- **KineSQL (FT-005):** persistência de scores
-- **Pipeline (FT-011):** integração no fluxo
+### Internal Dependencies
+- **Graph Engine (FT-002):** edge structure for deposit
+- **Evaporation (FT-014):** pheromone decay
+- **KineSQL (FT-005):** score persistence
+- **Pipeline (FT-011):** integration into the flow
 
-### Compatibilidade
-| Item | Requisito |
+### Compatibility
+| Item | Requirement |
 |------|-----------|
 | Rust | ≥ 1.75 stable |
-| OS | Linux (prod), macOS (dev) |
+| YOU | Linux (prod), macOS (dev) |
 
 ---
 
-## 10. Critérios de Rastreabilidade
+## 10. Traceability Criteria
 
-### Histórico de Mudanças
-| Data | Versão | Descrição | Autor |
+### Change History
+| Date | Version | Description | Author |
 |------|--------|-----------|-------|
-| 2026-05-23 | v1.0 | Criação da especificação inicial | Product Specialist |
+| 2026-05-23 | v1.0 | Creating the initial specification | Product Specialist |
 
-### IDs de Artefatos Relacionados
-| Tipo | ID | Descrição |
+### Related Artifact IDs
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-013-PHEROMONE-ROUTING | Esta especificação |
-| Código | `src/aco/pheromone.rs` | Implementação principal |
-| Código | `src/aco/routing.rs` | Seleção de rotas |
-| Bench | `benches/pheromone_convergence.rs` | Benchmark convergência |
-| Teste | `tests/pheromone_routing_tests.rs` | Testes unitários |
-| Dep | FT-002, FT-005, FT-014 | Features dependentes |
+| Spec | FT-013-PHEROMONE-ROUTING | This specification |
+| Code | `src/aco/pheromone.rs` | Main implementation |
+| Code | `src/aco/routing.rs` | Route selection |
+| Bench | `benches/pheromone_convergence.rs` | Benchmark convergence |
+| Test | `tests/pheromone_routing_tests.rs` | Unit tests |
+| Dep | FT-002, FT-005, FT-014 | Dependent features |
 
 ---
 
-## 11. Entrega e Critérios de Aceitação do MVP — Roadmap
+## 11. MVP Delivery and Acceptance Criteria — Roadmap
 
-### MVP (Semana 1-2)
-| Item | Critério de Aceite |
+### MVP (Week 1-2)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| `deposit(edge, score)` | Incrementa feromônio corretamente |
-| `get_pheromone(edge)` | Retorna score atual |
-| Feromônio inicial = 1.0 | Testado |
-| 5+ testes unitários | Passando |
+| `deposit(edge, score)` | Increases pheromone correctly |
+| `get_pheromone(edge)` | Returns current score |
+| Initial pheromone = 1.0 | Tested |
+| 5+ unit tests | Passing |
 
-**Saída:** Depósito funcional de feromônio em arestas do grafo.
+**Output:** Functional pheromone deposit on graph edges.
 
 ---
 
-### Iteração 1 (Semana 3-4)
-| Item | Critério de Aceite |
+### Iteration 1 (Week 3-4)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| `route(source, target)` | Seleção probabilística ACO |
-| Fórmula ACO (τ^α * η^β) | Implementada |
-| MMAS (τ_max, τ_min) | Limites ativos |
-| Integração Graph Engine | Depósitos refletem no grafo |
-| Benchmark convergência | Registrado (< 50 iter) |
+| `route(source, target)` | ACO probabilistic selection |
+| ACO formula (τ^α * η^β) | Implemented |
+| MMAS (τ_max, τ_min) | Active Limits |
+| Graph Engine Integration | Deposits reflect in the graph |
+| Benchmark convergence | Registered (< 50 iter) |
 
-**Saída:** Routing funcional com seleção ACO integrada ao grafo.
+**Output:** Functional routing with ACO selection integrated into the graph.
 
 ---
 
-### Iteração 2 (Semana 5-6)
-| Item | Critério de Aceite |
+### Iteration 2 (Week 5-6)
+| Item | Acceptance Criteria |
 |------|--------------------|
-| Persistência KineSQL | Scores sobrevivem restart |
-| Integração Pipeline | Pipeline usa rotas ACO |
-| Integração Evaporation (FT-014) | Decaimento funcional |
-| Concorrência validada | 50 depósitos simultâneos OK |
-| Audit trail | Histórico de depósitos rastreável |
-| Testes de carga | 5000 deposits/s sustentado |
-| Documentação completa | API docs + exemplos |
+| KineSQL Persistence | Scores survive restart |
+| Pipeline Integration | Pipeline uses ACO routes |
+| Evaporation Integration (FT-014) | Functional decay |
+| Validated concurrency | 50 simultaneous deposits OK |
+| Audit trail | Traceable deposit history |
+| Load Tests | 5000 deposits/s sustained |
+| Complete documentation | API docs + examples |
 
-**Saída:** Pheromone Routing production-ready integrado ao pipeline KCE.
+**Output:** Pheromone Routing production-ready integrated into the KCE pipeline.
 
 ---
 
-*Documento gerado em 2026-05-23 — KineContext Engine Product Specification*
+*Document generated on 2026-05-23 — KineContext Engine Product Specification*

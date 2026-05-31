@@ -1,41 +1,41 @@
-# FT-012 — Deploy e Infraestrutura (Docker + Config + Healthcheck)
+# FT-012 — Deploy and Infrastructure (Docker + Config + Healthcheck)
 
-**Módulo:** Deploy | **Versão:** v5.9 | **Prioridade:** P1 — Alto  
-**Artefato ID:** FT-012-DEPLOY | **Atualização:** 2026-05-23
-
----
-
-## 1. Contexto e Objetivo
-
-Deploy real do KCE em containers Docker com configuração 12-factor (env vars), healthcheck inteligente e readiness probes. Sem deploy funcional, o sistema é apenas código — não produto. Inclui Docker, docker-compose e preparação para K8s.
+**Module:** Deploy | **Version:** v5.9 | **Priority:** P1 — High  
+**Artifact ID:** FT-012-DEPLOY | **Update:** 2026-05-23
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 1. Context and Objective
 
-- [ ] AC-010: Dockerfile multi-stage (builder + runtime slim)
-- [ ] AC-011: docker-compose funcional com volumes persistentes
-- [ ] AC-012: Configuração via env vars (12-factor): `KINESQL_PATH`, `WAL_PATH`, `PORT`, `API_KEY`
-- [ ] AC-013: `/health` endpoint inteligente (verifica WAL, DB, latência)
+Real deployment of KCE in Docker containers with 12-factor configuration (env vars), smart healthcheck and readiness probes. Without functional deployment, the system is just code — not a product. Includes Docker, docker-compose and K8s preparation.
+
+---
+
+## 2. Acceptance Criteria (AC)
+
+- [ ] AC-010: Multi-stage Dockerfile (builder + slim runtime)
+- [ ] AC-011: functional docker-compose with persistent volumes
+- [ ] AC-012: Configuration via env vars (12-factor): `KINESQL_PATH`, `WAL_PATH`, `PORT`, `API_KEY`
+- [ ] AC-013: `/health` smart endpoint (checks WAL, DB, latency)
 - [ ] AC-014: Startup time < 2s
 - [ ] AC-015: Image size < 100MB
 - [ ] AC-016: Graceful shutdown (flush WAL + close connections)
-- [ ] AC-017: dotenv suportado para dev
+- [ ] AC-017: dotenv supported for dev
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Dockerfile funcional e otimizado
-- [ ] docker-compose com volume mapping
+- [ ] Functional and optimized Dockerfile
+- [ ] docker-compose with volume mapping
 - [ ] Config via `config` + `dotenv` crates
-- [ ] Healthcheck inteligente (3 checks)
-- [ ] Graceful shutdown implementado
-- [ ] Deploy testado end-to-end
+- [ ] Smart healthcheck (3 checks)
+- [ ] Graceful shutdown implemented
+- [ ] End-to-end tested deployment
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
 ### docker-compose.yml
 ```yaml
@@ -62,7 +62,7 @@ PORT=3000
 API_KEY=tk_dev_local
 ```
 
-### GET /health (inteligente)
+### GET /health (smart)
 ```json
 {
   "status": "healthy",
@@ -76,7 +76,7 @@ API_KEY=tk_dev_local
 }
 ```
 
-### GET /health (degradado)
+### GET /health (degraded)
 ```json
 {
   "status": "degraded",
@@ -91,51 +91,51 @@ API_KEY=tk_dev_local
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | Config carrega de env var | valor correto |
-| UT-002 | Config fallback para default | default funciona |
-| UT-003 | Health — tudo ok | `status: healthy` |
+| UT-001 | Config loads from env var | correct value |
+| UT-002 | Config fallback to default | default works |
+| UT-003 | Health — everything ok | `status: healthy` |
 | UT-004 | Health — DB down | `status: degraded` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado |
+| ID | Scenario | Result |
 |----|---------|-----------|
-| FT-001 | `docker build` | Imagem criada < 100MB |
-| FT-002 | `docker-compose up` | Sistema inicia, /health retorna 200 |
-| FT-003 | `docker stop` (graceful) | WAL flushed, sem corrupção |
+| FT-001 | `docker build` | Image created < 100MB |
+| FT-002 | `docker-compose up` | System starts, /health returns 200 |
+| FT-003 | `docker stop` (graceful) | WAL flushed, no corruption |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Docker → API → KineSQL | Pipeline funcional em container |
-| IT-002 | Docker restart → recovery | Dados recuperados do volume |
+| IT-001 | Docker → API → KineSQL | Functional pipeline in container |
+| IT-002 | Docker restart → recovery | Data retrieved from the volume |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Deploy containerizado é obrigatório para produção; configuração 12-factor para portabilidade; healthcheck inteligente para orquestração.
+**Context:** Containerized deployment is mandatory for production; 12-factor configuration for portability; Smart healthcheck for orchestration.
 
-**Assumptions:** Docker disponível em prod; volumes persistentes para data/WAL; K8s é futuro (readiness probe preparado).
+**Assumptions:** Docker available in prod; persistent volumes for data/WAL; K8s is future (readiness probe prepared).
 
-**Requirements:** R-001: Dockerfile multi-stage | R-002: docker-compose | R-003: Config 12-factor | R-004: Healthcheck inteligente | R-005: Graceful shutdown | R-006: Image < 100MB.
+**Requirements:** R-001: Multi-stage Dockerfile | R-002: docker-compose | R-003: 12-factor Config | R-004: Smart Healthcheck | R-005: Graceful shutdown | R-006: Image < 100MB.
 
 **Evidence:** `Dockerfile` | `docker-compose.yml` | `.env.example`
 
 ---
 
-## 7–11. (Resumo)
+## 7–11. (Summary)
 
-**Não funcionais:** Startup < 2s | Image < 100MB | Shutdown < 5s (flush WAL)  
-**Qualidade:** 0 corrupção em stop/restart | Config 100% via env | Cobertura healthcheck ≥ 3 componentes  
+**Non-functional:** Startup < 2s | Image < 100MB | Shutdown < 5s (WAL flush)  
+**Quality:** 0 corruption in stop/restart | Config 100% via env | healthcheck coverage ≥ 3 components  
 **Deps:** `config` ^0.14, `dotenv` ^0.15  
-**Rastreabilidade:** FT-012-DEPLOY | `Dockerfile`, `docker-compose.yml`, `.env.example`
+**Traceability:** FT-012-DEPLOY | `Dockerfile`, `docker-compose.yml`, `.env.example`
 
-**Roadmap:** MVP: Dockerfile + docker-compose + .env | Iter1: healthcheck inteligente + graceful shutdown | Iter2: K8s manifests + readiness/liveness probes + autoscaling
+**Roadmap:** MVP: Dockerfile + docker-compose + .env | Iter1: smart healthcheck + graceful shutdown | Iter2: K8s manifests + readiness/liveness probes + autoscaling

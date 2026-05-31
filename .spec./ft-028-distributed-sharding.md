@@ -1,47 +1,47 @@
 # FT-028 — Distributed Sharding (ACTA)
 
-**Módulo:** Infraestrutura / Core Engine | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-028-DISTRIBUTED-SHARDING | **Atualização:** 2026-05-30
+**Module:** Infrastructure / Core Engine | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-028-DISTRIBUTED-SHARDING | **Update:** 2026-05-30
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-À medida que o KCE escala para múltiplos nós e servidores, manter todo o grafo semântico e o espaço vetorial em um único nó torna-se inviável devido a limitações de CPU e memória. Esta especificação define o **Distributed Sharding**, que fatia os dados com base em chaves de partição e emprega um mecanismo dinâmico inspirado na divisão de trabalho de colônias de formigas: o **Ant-Colony Task Allocation (ACTA)**. O objetivo é distribuir a carga de busca e indexação dinamicamente conforme o uso real, mitigando problemas de shards quentes (*hot shards*).
+As KCE scales to multiple nodes and servers, maintaining the entire semantic graph and vector space on a single node becomes infeasible due to CPU and memory limitations. This specification defines **Distributed Sharding**, which slices data based on partition keys and employs a dynamic mechanism inspired by the division of labor in ant colonies: the **Ant-Colony Task Allocation (ACTA)**. The objective is to distribute the search and indexing load dynamically according to actual usage, mitigating hot shards problems.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-### Gerais
-- [ ] AC-001: Compilação limpa sem warnings no compilador Rust.
-- [ ] AC-002: Isolamento estrito entre shards de tenants distintos.
-- [ ] AC-003: Thread-safety completo para leituras simultâneas e redistribuições assíncronas.
+### General
+- [ ] AC-001: Clean compilation without warnings in the Rust compiler.
+- [ ] AC-002: Strict isolation between shards from different tenants.
+- [ ] AC-003: Complete thread-safety for concurrent reads and asynchronous redistributions.
 
-### Específicos
-- [ ] AC-010: Definição da chave de partição composta por `tenant_id` (isolamento primário) e `context_hash` (distribuição secundária do grafo).
-- [ ] AC-011: Encaminhamento dinâmico de buscas: se um nó $A$ que hospeda o Shard primário estiver sob alta utilização ($>85\%$ CPU/RAM), ele deve delegar a tarefa (query) de forma transparente para réplicas secundárias no nó $B$ menos carregado.
-- [ ] AC-012: O motor de homeostase distribui shards de forma a "atrair" dados semanticamente correlacionados para nós geograficamente ou fisicamente próximos, minimizando saltos de rede inter-nós.
-- [ ] AC-013: Migração assíncrona de shards: redistribuição de dados sem bloqueio das queries de leitura no hot path.
-- [ ] AC-014: Suporte para até 256 partições lógicas mapeadas dinamicamente para os nós físicos disponíveis.
+### Specifics
+- [ ] AC-010: Definition of the partition key composed of `tenant_id` (primary isolation) and `context_hash` (secondary distribution of the graph).
+- [ ] AC-011: Dynamic query routing: If a node $A$ hosting the primary Shard is under high utilization ($>85\%$ CPU/RAM), it must delegate the task (query) transparently to secondary replicas on the less loaded node $B$.
+- [ ] AC-012: The homeostasis engine distributes shards in such a way as to "attract" semantically correlated data to geographically or physically close nodes, minimizing inter-node network hops.
+- [ ] AC-013: Asynchronous shard migration: redistribution of data without blocking read queries on the hot path.
+- [ ] AC-014: Support for up to 256 logical partitions dynamically mapped to available physical nodes.
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] Implementação de traits e estruturas de particionamento de dados (`ShardRouter` e `TaskAllocator`).
-- [ ] Algoritmo ACTA simulado e validado em cenários de stress com redistribuição em background.
-- [ ] Testes de migração sem perda de pacotes ou interrupção de serviço.
-- [ ] Testes unitários com no mínimo 80% de cobertura.
-- [ ] Coexistência de shards locais (KineSQL) com roteamento de rede.
+- [ ] Implementation of traits and data partitioning structures (`ShardRouter` and `TaskAllocator`).
+- [ ] ACTA algorithm simulated and validated in stress scenarios with background redistribution.
+- [ ] Migration testing without packet loss or service interruption.
+- [ ] Unit tests with at least 80% coverage.
+- [ ] Coexistence of local shards (KineSQL) with network routing.
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Estrutura de Roteamento de Shard (JSON interno)
+### Shard Routing Structure (internal JSON)
 
-**Roteador de Shard configurado no nó:**
+**Shared router configured on the node:**
 ```json
 {
   "node_id": "8a72-f19b-449e-ba02",
@@ -57,9 +57,9 @@
 }
 ```
 
-### Resposta de Roteamento de Delegamento de Tarefa (Query)
+### Task Delegation Routing Response (Query)
 
-**JSON retornado ao delegar busca para o nó vizinho:**
+**JSON returned when delegating search to neighboring node:**
 ```json
 {
   "query_id": "9a1f-82bc",
@@ -72,92 +72,92 @@
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Entry | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Determinação de Shard | tenant=1, vector_hash=420 | shard_id consistente (ex: 12) |
-| UT-002 | Gatilho de Delegação ACTA | Carga do nó A = 90% | `TaskAllocator::should_delegate` retorna `true` |
-| UT-003 | Migração de Shard | Sinal de redistribuição | Dados movidos para o nó destino; checksum validado |
+| UT-001 | Shard Determination | tenant=1, vector_hash=420 | consistent shard_id (ex: 12) |
+| UT-002 | ACTA Delegation Trigger | Node A load = 90% | `TaskAllocator::should_delegate` returns `true` |
+| UT-003 | Shard Migration | Redistribution signal | Data moved to the destination node; validated checksum |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Simulação de Hot Shard | Carga artificial em 1 nó resulta no redirecionamento automático de 40% das queries para nós secundários em 30 segundos |
-| FT-002 | Queda de Nó Primário | Detecção e promoção imediata de um nó secundário para assumir as leituras do shard |
+| FT-001 | Hot Shard Simulation | Artificial load on 1 node results in automatic redirection of 40% of queries to secondary nodes in 30 seconds |
+| FT-002 | Primary Node Drop | Immediate detection and promotion of a secondary node to take over shard reads |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Sharding → KineSQL (FT-005) | Dados migrados são serializados e descarregados no banco em disco no destino |
-| IT-002 | Sharding → Homeostase (FT-022) | Homeostase ajusta os thresholds de carga que ativam a delegação de tarefas |
+| IT-001 | Sharding → KineSQL (FT-005) | Migrated data is serialized and downloaded to the disk database at the destination |
+| IT-002 | Sharding → Homeostasis (FT-022) | Homeostasis adjusts load thresholds that activate task delegation |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Escalonamento horizontal e mitigação de gargalos de hardware em clusters KCE operando em cenários reais com múltiplos clientes simultâneos.
+**Context:** Horizontal scaling and mitigation of hardware bottlenecks in KCE clusters operating in real-world scenarios with multiple simultaneous clients.
 
-**Assumptions:** Cada nó físico conhece a topologia de nós vizinhos e as capacidades máximas de hardware declaradas. A rede inter-nós possui latência RTT inferior a 2ms.
+**Assumptions:** Each physical node knows the topology of neighboring nodes and the declared maximum hardware capabilities. The inter-node network has RTT latency of less than 2ms.
 
-**Requirements:** R-001: Roteamento baseado em hash de tenant e dados | R-002: Delegação de tarefas baseada em carga (ACTA) | R-003: Migração assíncrona tolerante a falhas.
+**Requirements:** R-001: Tenant and data hash-based routing | R-002: Load-Based Task Delegation (ACTA) | R-003: Asynchronous fault-tolerant migration.
 
-**Evidence:** Execução de scripts de carga distribuídos simulando redistribuição dinâmica de shards e validação de latências p95.
+**Evidence:** Execution of distributed load scripts simulating dynamic redistribution of shards and validation of p95 latencies.
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Appearance | Metric | Target |
 |---------|---------|------|
-| Overhead de Roteamento | Latência adicional de rede para decisão de redirecionamento | < 0.2ms |
-| Tempo de Convergência | Tempo para um novo nó assumir um shard delegado | < 1s |
-| Perda de Dados durante Migração | Integridade das queries em andamento | 0 erros (Transicional) |
+| Routing Overhead | Additional network latency for redirection decision | < 0.2ms |
+| Convergence Time | Time for a new node to take over a delegated shard | < 1s |
+| Data Loss During Migration | Integrity of ongoing queries | 0 errors (Transitional) |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:**
-- Desvio padrão da carga de CPU entre os nós do cluster inferior a 15% após estabilização do ACTA.
-- Zero perda de dados ou inconsistência durante a migração.
-- Cobertura de testes unitários superior a 80%.
+**Success:**
+- Standard deviation of CPU load between cluster nodes less than 15% after ACTA stabilization.
+- Zero data loss or inconsistency during migration.
+- Unit test coverage greater than 80%.
 
-**Falha (BLOQUEANTE):**
-- Inconsistência de partição (duas chaves idênticas em shards ativos separados sem replicação configurada).
-- Vazamento de dados de tenant durante a redistribuição.
+**Failure (BLOCKING):**
+- Partition inconsistency (two identical keys on separate active shards with no replication configured).
+- Tenant data leak during redeployment.
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `uuid` | ^1.6 | IDs únicos de nós e transações |
-| `parking_lot` | ^0.12 | Locks concorrentes para tabelas de rotas |
+| `uuid` | ^1.6 | Unique node and transaction IDs |
+| `parking_lot` | ^0.12 | Concurrent locks for route tables |
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-028-DISTRIBUTED-SHARDING | Esta especificação |
-| Design | `docs/kce_distributed_architecture.md` | Arquitetura distribuída de swarm |
+| Spec | FT-028-DISTRIBUTED-SHARDING | This specification |
+| Design | `docs/kce_distributed_architecture.md` | Swarm distributed architecture |
 
 ---
 
 ## 11. Roadmap
 
-### MVP (Fase 1)
-Particionamento estático em memória com roteamento baseado em tenant_id. Sem migração assíncrona.
+### MVP (Phase 1)
+Static in-memory partitioning with tenant_id-based routing. No asynchronous migration.
 
-### Iteração 1 (Fase 2)
-Implementação do ACTA (delegação dinâmica baseada em telemetria de CPU). Suporte a réplicas ativas e redirecionamento de busca transparente.
+### Iteration 1 (Phase 2)
+Implementation of ACTA (dynamic delegation based on CPU telemetry). Support active replicas and transparent search redirection.
 
-### Iteração 2 (Fase 3)
-Migração dinâmica assíncrona de shards com fsync remoto e integração completa com a homeostase global.
+### Iteration 2 (Phase 3)
+Asynchronous dynamic shard migration with remote fsync and full integration with global homeostasis.

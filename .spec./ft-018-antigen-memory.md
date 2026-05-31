@@ -1,52 +1,52 @@
 # FT-018 — Antigen Memory System
 
-**Módulo:** AIS (Artificial Immune System) | **Versão:** v6.0 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-018-ANTIGEN-MEMORY | **Atualização:** 2026-05-23
+**Module:** AIS (Artificial Immune System) | **Version:** v6.0 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-018-ANTIGEN-MEMORY | **Update:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O Antigen Memory System **memoriza padrões críticos** (ataques, fraudes, eventos raros) de forma persistente, permitindo resposta mais rápida em ocorrências futuras. Inspirado nas células B de memória do sistema imunológico — após primeira exposição a um antígeno, o sistema "lembra" e responde exponencialmente mais rápido na reexposição.
+The Antigen Memory System **memorizes critical patterns** (attacks, fraud, rare events) persistently, allowing for faster response in future occurrences. Inspired by the immune system's memory B cells — after first exposure to an antigen, the system "remembers" it and responds exponentially faster upon re-exposure.
 
-### Valor
-- Aprendizado contínuo real — sistema nunca esquece ameaças
-- Resposta mais rápida no futuro (O(1) lookup vs O(n) detecção)
-- Base de conhecimento de anomalias cresce organicamente
+### Value
+- True continuous learning — system never forgets threats
+- Faster response in the future (O(1) lookup vs O(n) detection)
+- Anomaly knowledge base grows organically
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: `store_antigen(pattern, metadata)` persiste padrão anômalo
-- [ ] AC-011: `match_antigen(input)` verifica se input é similar a antígeno conhecido
-- [ ] AC-012: Match usa similarity threshold configurável (default: 0.85)
-- [ ] AC-013: Lookup em < 1ms (hash-based ou index)
-- [ ] AC-014: Antigens persistidos no KineSQL — sobrevivem restart
-- [ ] AC-015: Cada antigen possui: `pattern`, `severity`, `first_seen`, `last_seen`, `match_count`, `metadata`
-- [ ] AC-016: Antigen expiry configurável (default: 90 dias, 0 = permanente)
-- [ ] AC-017: Antigen memory exportável (JSON/CSV) para auditoria
-- [ ] AC-018: Integração com Immune Detection (FT-017) — anomalias viram antigens
+- [ ] AC-010: `store_antigen(pattern, metadata)` persists anomalous pattern
+- [ ] AC-011: `match_antigen(input)` checks if input is similar to known antigen
+- [ ] AC-012: Match uses configurable similarity threshold (default: 0.85)
+- [ ] AC-013: Lookup in < 1ms (hash-based or index)
+- [ ] AC-014: Antigens persisted in KineSQL — survive restart
+- [ ] AC-015: Each antigen has: `pattern`, `severity`, `first_seen`, `last_seen`, `match_count`, `metadata`
+- [ ] AC-016: Configurable Antigen Expiry (default: 90 days, 0 = permanent)
+- [ ] AC-017: Antigen memory exportable (JSON/CSV) for auditing
+- [ ] AC-018: Integration with Immune Detection (FT-017) — anomalies become antigens
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] store/match funcional e testado
-- [ ] Persistência KineSQL
+- [ ] store/match functional and tested
+- [ ] KineSQL Persistence
 - [ ] Lookup < 1ms
-- [ ] Expiry funcional
+- [ ] Functional expiration
 - [ ] Export JSON/CSV
-- [ ] Integração FT-017
-- [ ] Cobertura ≥ 80%
+- [ ] FT-017 Integration
+- [ ] Coverage ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Armazenamento de antígeno
+### Antigen storage
 
-**Entrada (anomalia detectada):**
+**Input (anomaly detected):**
 ```json
 {
   "pattern": {
@@ -59,7 +59,7 @@ O Antigen Memory System **memoriza padrões críticos** (ataques, fraudes, event
 }
 ```
 
-**Antigen criado:**
+**Antigen created:**
 ```json
 {
   "antigen_id": "ag_001",
@@ -73,13 +73,13 @@ O Antigen Memory System **memoriza padrões críticos** (ataques, fraudes, event
 }
 ```
 
-### Match de antígeno conhecido
-**Input semelhante a antígeno:**
+### Known antigen match
+**Antigen-like input:**
 ```json
 { "query_vector": [0.98, 0.02, 0.97, 0.03], "request_frequency": 450 }
 ```
 
-**Resultado:**
+**Result:**
 ```json
 {
   "antigen_match": true,
@@ -102,69 +102,69 @@ ag_003,LOW,2026-03-01T12:00:00Z,2026-03-01T12:00:00Z,0,EXPIRED
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | Store antigen | antigen_id gerado, persistido |
+| UT-001 | Store antigen | antigen_id generated, persisted |
 | UT-002 | Match — similar (0.97) | `antigen_match: true` |
 | UT-003 | Match — dissimilar (0.30) | `antigen_match: false` |
-| UT-004 | Match count incrementa | `match_count += 1` |
-| UT-005 | Expiry — antigen expirado | não retornado em match |
-| UT-006 | Lookup performance | < 1ms para 1000 antigens |
-| UT-007 | Export JSON | formato válido |
-| UT-008 | Export CSV | formato válido |
+| UT-004 | Match count increments | `match_count += 1` |
+| UT-005 | Expiry — expired antigen | not returned in match |
+| UT-006 | Lookup performance | < 1ms for 1000 antigens |
+| UT-007 | Export JSON | valid format |
+| UT-008 | Export CSV | valid format |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Pattern vazio | `Err(EmptyPattern)` |
-| UF-002 | Severity inválida | `Err(InvalidSeverity)` |
-| UF-003 | Antigen duplicado exato | Atualiza existing (idempotente) |
+| UF-001 | Empty pattern | `Err(EmptyPattern)` |
+| UF-002 | Invalid Severity | `Err(InvalidSeverity)` |
+| UF-003 | Exact duplicate antigen | Update existing (idempotent) |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado |
+| ID | Scenario | Result |
 |----|---------|-----------|
-| FT-001 | Store 100 antigens → match | Todos matcheiam corretamente |
-| FT-002 | Antigen survives restart | Persiste via KineSQL |
-| FT-003 | Expiry após 90 dias (simulado) | Antigen removido de matches |
+| FT-001 | Store 100 antigens → match | Everyone matches correctly |
+| FT-002 | Antigen survives restart | Persists via KineSQL |
+| FT-003 | Expiry after 90 days (simulated) | Antigen removed from matches |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Detection (FT-017) → Antigen Memory | Anomalia cria antigen automaticamente |
-| IT-002 | Antigen → Response Amplifier (FT-019) | Antigen match amplifica resposta |
-| IT-003 | Antigen → KineSQL | Persistência funcional |
+| IT-001 | Detection (FT-017) → Antigen Memory | Anomaly creates antigen automatically |
+| IT-002 | Antigen → Response Amplifier (FT-019) | Antigen match amplifies response |
+| IT-003 | Antigen → KineSQL | Functional persistence |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Detecção de anomalias é cara (O(n)). Memorizar padrões críticos permite resposta O(1) em reexposição. Células B de memória biológicas inspiram persistência de longo prazo para ameaças conhecidas.
+**Context:** Anomaly detection is expensive (O(n)). Memorizing critical patterns allows O(1) response on re-exposure. Biological memory B cells inspire long-term persistence to known threats.
 
-**Assumptions:** Antigens são vetoriais com similarity match; 1000 antigens é ceiling prático para MVP; lookup hash-based para < 1ms; persistência KineSQL; expiry configurável.
+**Assumptions:** Antigens are vectors with similarity match; 1000 antigens is a practical ceiling for MVP; hash-based lookup for < 1ms; KineSQL persistence; expiry configurable.
 
-**Requirements:** R-001: store/match | R-002: Persistência | R-003: < 1ms lookup | R-004: Expiry | R-005: Export JSON/CSV | R-006: Integração FT-017 | R-007: Idempotência.
+**Requirements:** R-001: store/match | R-002: Persistence | R-003: < 1ms lookup | R-004: Expiry | R-005: Export JSON/CSV | R-006: Integration FT-017 | R-007: Idempotence.
 
 **Evidence:** `tests/antigen_memory_tests.rs` | `reports/antigen_response_time.md`
 
 ---
 
-## 7–11. (Resumo)
+## 7–11. (Summary)
 
-**Não funcionais:** Lookup < 1ms | Storage < 10MB para 1000 antigens | Expiry accuracy ± 1 hora  
-**Qualidade:** Match accuracy > 95% | 0 false negatives para exact match | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Lookup > 10ms | Antigen perdido após restart | False negative > 5%  
+**Non-functional:** Lookup < 1ms | Storage < 10MB for 1000 antigens | Expiry accuracy ± 1 hour  
+**Quality:** Match accuracy > 95% | 0 false negatives for exact match | Coverage ≥ 80%  
+**Failure (BLOCKING):** Lookup > 10ms | Antigen lost after restart | False negative > 5%  
 **Deps:** KineSQL (FT-005), Immune Detection (FT-017), Response Amplifier (FT-019)  
-**Rastreabilidade:** FT-018-ANTIGEN-MEMORY | `src/ais/antigen.rs`
+**Traceability:** FT-018-ANTIGEN-MEMORY | `src/ais/antigen.rs`
 
-**Roadmap:** MVP: store/match com hash lookup | Iter1: KineSQL persistência + expiry + CSV export | Iter2: Similarity match + FT-017 integração + audit trail
+**Roadmap:** MVP: store/match with hash lookup | Iter1: KineSQL persistence + expiry + CSV export | Iter2: Similarity match + FT-017 integration + audit trail
 
 ---
 
-*Documento gerado em 2026-05-23 — KineContext Engine Product Specification*
+*Document generated on 2026-05-23 — KineContext Engine Product Specification*

@@ -1,44 +1,44 @@
 # FT-006 — API Gateway (Axum)
 
-**Módulo:** Interface | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-006-API-GATEWAY | **Atualização:** 2026-05-23
+**Module:** Interface | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-006-API-GATEWAY | **Updated:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-A API é a **interface externa** do KCE. Construída sobre Axum, expõe endpoints REST com contrato OpenAPI, autenticação por API Key, validação de input, timeout e respostas JSON consistentes. É o ponto de entrada para clientes, frontends e integrações.
+The API is the **external interface** of the KCE. Built on Axum, it exposes REST endpoints with an OpenAPI contract, API Key authentication, input validation, timeout, and consistent JSON responses. It is the entry point for clients, frontends, and integrations.
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
 - [ ] AC-010: Endpoints: `POST /query`, `POST /encode`, `POST /action`, `GET /health`, `GET /metrics`
-- [ ] AC-011: OpenAPI/Swagger UI disponível via `utoipa`
-- [ ] AC-012: Autenticação por API Key (`x-api-key` header) — 401 sem chave
-- [ ] AC-013: Timeout configurável por request (default: 100ms)
-- [ ] AC-014: Validação de input — rejeita payloads inválidos com 400
-- [ ] AC-015: Todas respostas são JSON válido com status codes corretos
+- [ ] AC-011: OpenAPI/Swagger UI available via `utoipa`
+- [ ] AC-012: API Key authentication (`x-api-key` header) — 401 without key
+- [ ] AC-013: Configurable timeout per request (default: 100ms)
+- [ ] AC-014: Input validation — rejects invalid payloads with 400
+- [ ] AC-015: All responses are valid JSON with correct status codes
 - [ ] AC-016: p95 < 100ms
-- [ ] AC-017: Taxa de erro < 1% sob carga normal
-- [ ] AC-018: Request ID em todas respostas para rastreabilidade
-- [ ] AC-019: CORS configurável
+- [ ] AC-017: Error rate < 1% under normal load
+- [ ] AC-018: Request ID in all responses for traceability
+- [ ] AC-019: Configurable CORS
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] 5 endpoints implementados e testados
-- [ ] OpenAPI spec gerada automaticamente
-- [ ] Auth middleware funcional
-- [ ] Timeout implementado
-- [ ] Validação de input ativa
-- [ ] Request ID em todas respostas
-- [ ] Testes unitários + funcionais ≥ 80%
+- [ ] 5 endpoints implemented and tested
+- [ ] Automatically generated OpenAPI spec
+- [ ] Functional auth middleware
+- [ ] Timeout implemented
+- [ ] Active input validation
+- [ ] Request ID in all responses
+- [ ] Unit + functional tests ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
 ### POST /query
 **Request:**
@@ -60,12 +60,12 @@ curl -X POST http://localhost:3000/query \
 }
 ```
 
-### Sem API Key (401)
+### Without API Key (401)
 ```json
 { "error": "UNAUTHORIZED", "message": "Missing or invalid x-api-key", "code": 401 }
 ```
 
-### Payload inválido (400)
+### Invalid payload (400)
 ```json
 { "error": "VALIDATION_ERROR", "message": "query_vector is required", "code": 400 }
 ```
@@ -85,84 +85,84 @@ curl -X POST http://localhost:3000/query \
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | Validação payload válido | `Ok(parsed)` |
-| UT-002 | Validação payload vazio | `Err(ValidationError)` |
-| UT-003 | Auth com chave válida | request passa |
-| UT-004 | Auth sem chave | 401 |
-| UT-005 | Auth chave errada | 401 |
-| UT-006 | Request ID gerado | header `x-request-id` presente |
+| UT-001 | Valid payload validation | `Ok(parsed)` |
+| UT-002 | Empty payload validation | `Err(ValidationError)` |
+| UT-003 | Auth with valid key | request passes |
+| UT-004 | Auth without key | 401 |
+| UT-005 | Auth with wrong key | 401 |
+| UT-006 | Generated Request ID | `x-request-id` header present |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Body não-JSON | 400 Bad Request |
-| UF-002 | Timeout excedido | 408 Request Timeout |
-| UF-003 | Endpoint inexistente | 404 Not Found |
+| UF-001 | Non-JSON body | 400 Bad Request |
+| UF-002 | Timeout exceeded | 408 Request Timeout |
+| UF-003 | Non-existent endpoint | 404 Not Found |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Chamada HTTP real /query | 200 com JSON válido |
-| FT-002 | Chamada /health | 200 com status components |
-| FT-003 | 100 requests concorrentes | Todas retornam sem erro |
-| FT-004 | Swagger UI acessível | /swagger-ui renderiza |
+| FT-001 | Real HTTP call /query | 200 with valid JSON |
+| FT-002 | /health call | 200 with components status |
+| FT-003 | 100 concurrent requests | All return without error |
+| FT-004 | Accessible Swagger UI | /swagger-ui renders |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | API → Retrieval → Response | Pipeline completo via HTTP |
-| IT-002 | API → MCE | /encode + /action funcionais |
-| IT-003 | API → Observabilidade | Request gera log + métrica |
+| IT-001 | API → Retrieval → Response | Full pipeline via HTTP |
+| IT-002 | API → MCE | /encode + /action functional |
+| IT-003 | API → Observability | Request generates log + metric |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Interface REST do KCE sobre Axum; ponto de entrada para todos os clientes, com contrato OpenAPI, autenticação e validação.
+**Context:** KCE REST interface on Axum; entry point for all clients, with OpenAPI contract, authentication, and validation.
 
-**Assumptions:** Axum 0.7+; API Key é suficiente para MVP (OAuth2 em iteração futura); timeout global configurável; todas respostas são JSON.
+**Assumptions:** Axum 0.7+; API Key is sufficient for MVP (OAuth2 in future iteration); global configurable timeout; all responses are JSON.
 
-**Requirements:** R-001: 5 endpoints | R-002: OpenAPI | R-003: Auth API Key | R-004: Timeout | R-005: Validação | R-006: p95 < 100ms | R-007: Request ID.
+**Requirements:** R-001: 5 endpoints | R-002: OpenAPI | R-003: Auth API Key | R-004: Timeout | R-005: Validation | R-006: p95 < 100ms | R-007: Request ID.
 
-**Evidence:** `tests/api_tests.rs` | OpenAPI spec em `/swagger-ui`
+**Evidence:** `tests/api_tests.rs` | OpenAPI spec at `/swagger-ui`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Alvo |
+| Aspect | Target |
 |---------|------|
-| Latência p95 | < 100ms |
-| Erro rate | < 1% |
-| Concorrência | 1000 req/s sustentado |
+| p95 latency | < 100ms |
+| Error rate | < 1% |
+| Concurrency | 1000 req/s sustained |
 | Startup time | < 2s |
 
-### Segurança
-- API Key obrigatória em todos endpoints exceto /health
-- Input sanitizado contra injection
-- Headers de segurança (X-Content-Type-Options, X-Frame-Options)
+### Security
+- Mandatory API Key on all endpoints except /health
+- Input sanitized against injection
+- Security headers (X-Content-Type-Options, X-Frame-Options)
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** p95 < 100ms | Erro < 1% | Swagger funcional | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** p95 > 200ms | Erro > 5% | Auth bypass possível
+**Success:** p95 < 100ms | Error < 1% | Functional Swagger | Coverage ≥ 80%  
+**Failure (BLOCKING):** p95 > 200ms | Error > 5% | Auth bypass possible
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
 | `axum` | ^0.7 | Web framework |
 | `utoipa` | ^4 | OpenAPI |
@@ -172,23 +172,23 @@ curl -X POST http://localhost:3000/query \
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID |
+| Type | ID |
 |------|----|
 | Spec | FT-006-API-GATEWAY |
-| Código | `src/api/mod.rs`, `src/api/routes.rs`, `src/api/middleware.rs` |
-| Teste | `tests/api_integration.rs` |
+| Code | `src/api/mod.rs`, `src/api/routes.rs`, `src/api/middleware.rs` |
+| Test | `tests/api_integration.rs` |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-POST /query + GET /health | Respostas JSON | Validação básica | 5+ testes
+### MVP (Week 1-2)
+POST /query + GET /health | JSON responses | Basic validation | 5+ tests
 
-### Iteração 1 (Semana 3-4)
+### Iteration 1 (Week 3-4)
 Auth middleware | POST /encode + /action | GET /metrics | OpenAPI/Swagger | Timeout | Request ID
 
-### Iteração 2 (Semana 5-6)
-CORS | Rate limiting | Load test 1000 req/s | Integração completa | Docs
+### Iteration 2 (Week 5-6)
+CORS | Rate limiting | 1000 req/s load test | Full integration | Docs

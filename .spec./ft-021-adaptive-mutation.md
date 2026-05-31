@@ -1,51 +1,51 @@
 # FT-021 — Adaptive Mutation Engine
 
-**Módulo:** AIS (Artificial Immune System) | **Versão:** v6.0 | **Prioridade:** P1 — Alto  
-**Artefato ID:** FT-021-ADAPTIVE-MUTATION | **Atualização:** 2026-05-23
+**Module:** AIS (Artificial Immune System) | **Version:** v6.0 | **Priority:** P1 — High  
+**Artifact ID:** FT-021-ADAPTIVE-MUTATION | **Update:** 2026-05-23
 
 ---
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-O Adaptive Mutation Engine **muta representações de contexto** (embeddings) de forma controlada para explorar soluções novas e evitar estagnação. Aplica perturbações leves aos vetores de busca, testando novas combinações que podem revelar contexto relevante não descoberto pela busca direta. Inspirado em hipermutação somática de anticorpos.
+The Adaptive Mutation Engine **mutates context representations** (embeddings) in a controlled way to explore new solutions and avoid stagnation. Applies mild perturbations to the search vectors, testing new combinations that may reveal relevant context not discovered by direct search. Inspired by somatic antibody hypermutation.
 
-### Valor
-- Inovação emergente — descobre contexto fora do "caminho batido"
-- Evita estagnação quando rotas ACO convergem demais
-- Exploração controlada sem comprometer estabilidade
+### Value
+- Emerging innovation — discovers context off the beaten path
+- Prevents stagnation when ACO routes converge too much
+- Controlled exploration without compromising stability
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 2. Acceptance Criteria (AC)
 
-- [ ] AC-010: `mutate(vector, rate)` retorna vetor perturbado dentro de range controlado
-- [ ] AC-011: Taxa de mutação (`rate`) configurável (default: 0.05, range: 0.0..0.3)
-- [ ] AC-012: Mutação preserva norma L2 do vetor (re-normaliza após perturbação)
-- [ ] AC-013: Perturbação gaussiana com σ proporcional à rate
-- [ ] AC-014: `explore_mutations(vector, n)` gera N variantes e testa cada uma
-- [ ] AC-015: Seleção do melhor mutante por score de retrieval
-- [ ] AC-016: Mutante superior ao original → substitui no pipeline (elitismo)
-- [ ] AC-017: Mutação é reversível — original preservado se nenhum mutante melhora
-- [ ] AC-018: Métricas: `kce_mutations_total`, `kce_mutations_successful`, `kce_mutation_improvement_avg`
+- [ ] AC-010: `mutate(vector, rate)` returns disturbed vector within controlled range
+- [ ] AC-011: Mutation rate (`rate`) configurable (default: 0.05, range: 0.0..0.3)
+- [ ] AC-012: Mutation preserves L2 norm of the vector (re-normalizes after perturbation)
+- [ ] AC-013: Gaussian perturbation with σ proportional to rate
+- [ ] AC-014: `explore_mutations(vector, n)` generates N variants and tests each one
+- [ ] AC-015: Selection of the best mutant by retrieval score
+- [ ] AC-016: Mutant superior to the original → replaces in the pipeline (elitism)
+- [ ] AC-017: Mutation is reversible — original preserved if no mutant improves
+- [ ] AC-018: Metrics: `kce_mutations_total`, `kce_mutations_successful`, `kce_mutation_improvement_avg`
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] `mutate()` com perturbação gaussiana e re-normalização
-- [ ] `explore_mutations()` com seleção do melhor
-- [ ] Elitismo (original preservado se melhor)
-- [ ] Rate configurável com validação
-- [ ] Métricas de mutação
-- [ ] Cobertura ≥ 80%
+- [ ] `mutate()` with Gaussian perturbation and re-normalization
+- [ ] `explore_mutations()` with selection of the best
+- [ ] Elitism (original preserved if better)
+- [ ] Configurable rate with validation
+- [ ] Mutation metrics
+- [ ] Coverage ≥ 80%
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Mutação de vetor de busca
+### Search vector mutation
 
-**Entrada:**
+**Input:**
 ```json
 {
   "original_vector": [0.12, 0.85, 0.33, 0.67],
@@ -54,7 +54,7 @@ O Adaptive Mutation Engine **muta representações de contexto** (embeddings) de
 }
 ```
 
-**Saída:**
+**Output:**
 ```json
 {
   "original_score": 0.82,
@@ -71,7 +71,7 @@ O Adaptive Mutation Engine **muta representações de contexto** (embeddings) de
 }
 ```
 
-### Sem melhoria → preserva original
+### No improvement → preserves original
 ```json
 {
   "original_score": 0.95,
@@ -84,70 +84,70 @@ O Adaptive Mutation Engine **muta representações de contexto** (embeddings) de
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Saída Esperada |
+| ID | Case | Expected Output |
 |----|------|----------------|
-| UT-001 | Mutação preserva dimensão | `mutated.len() == original.len()` |
-| UT-002 | Norma L2 preservada | `‖mutated‖₂ ≈ ‖original‖₂` (±1%) |
-| UT-003 | Rate=0.0 → sem mudança | `mutated == original` |
-| UT-004 | Rate=0.3 → perturbação visível | distância > 0 |
-| UT-005 | Elitismo — mutante pior | original mantido |
-| UT-006 | Elitismo — mutante melhor | mutante selecionado |
-| UT-007 | Reprodutibilidade com seed | seed fixo → mesma mutação |
-| UT-008 | N mutações geradas | exatamente N variantes |
+| UT-001 | Mutation preserves dimension | `mutated.len() == original.len()` |
+| UT-002 | L2 norm preserved | `‖mutated‖₂ ≈ ‖original‖₂` (±1%) |
+| UT-003 | Rate=0.0 → no change | `mutated == original` |
+| UT-004 | Rate=0.3 → visible disturbance | distance > 0 |
+| UT-005 | Elitism — worst mutant | original kept |
+| UT-006 | Elitism — better mutant | selected mutant |
+| UT-007 | Reproducibility with seed | fixed seed → same mutation |
+| UT-008 | N mutations generated | exactly N variants |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
 | UF-001 | Rate > 0.3 | `Err(MutationRateTooHigh)` |
-| UF-002 | Rate negativa | `Err(InvalidRate)` |
-| UF-003 | Vetor vazio | `Err(EmptyVector)` |
+| UF-002 | Negative rate | `Err(InvalidRate)` |
+| UF-003 | Empty vector | `Err(EmptyVector)` |
 | UF-004 | N = 0 | `Err(InvalidMutationCount)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado |
+| ID | Scenario | Result |
 |----|---------|-----------|
-| FT-001 | 100 mutações: ≥ 20% melhoram original | Taxa de sucesso ≥ 20% |
-| FT-002 | Mutação sob convergência ACO | Descobre rota nova ≥ 10% dos casos |
-| FT-003 | Pipeline com mutação ativa | Score médio melhora ≥ 3% |
+| FT-001 | 100 mutations: ≥ 20% improve original | Success rate ≥ 20% |
+| FT-002 | Mutation under ACO convergence | Discovers new route ≥ 10% of cases |
+| FT-003 | Pipeline with active mutation | Average score improves ≥ 3% |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Mutation → Retrieval | Mutantes testados no Retrieval Engine |
-| IT-002 | Mutation → ACO | Mutações alimentam exploração ACO |
-| IT-003 | Mutation → Métricas | `kce_mutations_successful` registrado |
+| IT-001 | Mutation → Retrieval | Mutants tested in the Retrieval Engine |
+| IT-002 | Mutation → ACO | Mutations fuel ACO exploitation |
+| IT-003 | Mutation → Metrics | `kce_mutations_successful` registered |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Quando ACO converge forte, o sistema pode ficar preso em local optima. A mutação adaptativa explora soluções novas perturbando embeddings de forma controlada, inspirada em hipermutação somática de anticorpos.
+**Context:** When ACO converges strongly, the system may be trapped in local optima. Adaptive mutation explores new solutions by perturbing embeddings in a controlled way, inspired by somatic hypermutation of antibodies.
 
-**Assumptions:** Perturbação gaussiana é adequada; taxa de 5% é conservadora para início; re-normalização L2 mantém compatibilidade com cosine similarity; elitismo garante estabilidade; seed para reprodutibilidade em debug.
+**Assumptions:** Gaussian perturbation is appropriate; 5% rate is conservative to begin with; L2 re-normalization maintains compatibility with cosine similarity; elitism guarantees stability; seed for debug reproducibility.
 
-**Requirements:** R-001: mutate() gaussiana | R-002: Re-normalização L2 | R-003: explore_mutations() com seleção | R-004: Elitismo | R-005: Rate configurável | R-006: Métricas | R-007: Reprodutibilidade com seed.
+**Requirements:** R-001: Gaussian mutate() | R-002: L2 Re-normalization | R-003: explore_mutations() with selection | R-004: Elitism | R-005: Configurable rate | R-006: Metrics | R-007: Reproducibility with seed.
 
 **Evidence:** `tests/mutation_tests.rs` | `reports/mutation_impact.md`
 
 ---
 
-## 7–11. (Resumo)
+## 7–11. (Summary)
 
-**Não funcionais:** Latência mutação < 1ms | Overhead pipeline < 5ms com 5 mutantes | Memória < 1MB extra  
-**Qualidade:** Taxa de melhoria ≥ 20% | Score médio ≥ 3% melhor | Norma L2 preservada ±1% | Cobertura ≥ 80%  
-**Falha (BLOQUEANTE):** Norma L2 diverge > 5% | Taxa de melhoria < 5% | Crash em mutação  
+**Non-functional:** Mutation latency < 1ms | Overhead pipeline < 5ms with 5 mutants | Memory < 1MB extra  
+**Quality:** Improvement rate ≥ 20% | Average score ≥ 3% better | L2 norm preserved ±1% | Coverage ≥ 80%  
+**Failure (BLOCKING):** L2 standard deviates > 5% | Improvement rate < 5% | Changing crash  
 **Deps:** Retrieval (FT-001), ACO (FT-013-016), `rand` ^0.8  
-**Rastreabilidade:** FT-021-ADAPTIVE-MUTATION | `src/ais/mutation.rs`
+**Traceability:** FT-021-ADAPTIVE-MUTATION | `src/ais/mutation.rs`
 
-**Roadmap:** MVP: mutate() gaussiana + re-norm | Iter1: explore_mutations() + elitismo + seed | Iter2: Integração ACO + pipeline + métricas + adaptive rate
+**Roadmap:** MVP: Gaussian mutate() + re-norm | Iter1: explore_mutations() + elitism + seed | Iter2: ACO integration + pipeline + metrics + adaptive rate
 
 ---
 
-*Documento gerado em 2026-05-23 — KineContext Engine Product Specification*
+*Document generated on 2026-05-23 — KineContext Engine Product Specification*

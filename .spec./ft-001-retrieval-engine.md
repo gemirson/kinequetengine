@@ -1,56 +1,56 @@
-# FT-001 — Retrieval Engine (Busca Híbrida)
+# FT-001 — Retrieval Engine (Hybrid Search)
 
-**Módulo:** Core Engine | **Versão:** v5.9 | **Prioridade:** P0 — Crítico  
-**Artefato ID:** FT-001-RETRIEVAL-ENGINE | **Atualização:** 2026-05-23
-
----
-
-## 1. Contexto e Objetivo
-
-O Retrieval Engine é o primeiro estágio do pipeline cognitivo do KCE. Realiza buscas híbridas combinando **cosine similarity** (SIMD/AVX2) e **prime similarity** (GCD). Recebe query vetorial e retorna candidatos relevantes para Graph Engine e ECMA. Deve operar com datasets de até 1M+ vetores em produção.
+**Module:** Core Engine | **Version:** v5.9 | **Priority:** P0 — Critical  
+**Artifact ID:** FT-001-RETRIEVAL-ENGINE | **Updated:** 2026-05-23
 
 ---
 
-## 2. Critérios de Aceite (AC)
+## 1. Context and Objective
 
-### Gerais
-- [ ] AC-001: Compila sem warnings em `--release`
+The Retrieval Engine is the first stage of the KCE cognitive pipeline. It performs hybrid searches combining **cosine similarity** (SIMD/AVX2) and **prime similarity** (GCD). It receives a vector query and returns relevant candidates for the Graph Engine and ECMA. It must operate with datasets of up to 1M+ vectors in production.
+
+---
+
+## 2. Acceptance Criteria (AC)
+
+### General
+- [ ] AC-001: Compiles without warnings in `--release`
 - [ ] AC-002: Thread-safe via `Arc<RwLock<...>>` / `parking_lot`
-- [ ] AC-003: Interface pública com doc comments
+- [ ] AC-003: Public interface with doc comments
 
-### Específicos
-- [ ] AC-010: Cosine similarity: `1.0` para vetores idênticos, `0.0` para ortogonais, `-1.0` para opostos
-- [ ] AC-011: Prime similarity via GCD normalizado
-- [ ] AC-012: Busca híbrida com pesos configuráveis (`cosine_weight`, `prime_weight`)
-- [ ] AC-013: SIMD (AVX2) ativo com fallback seguro
-- [ ] AC-014: Early pruning com threshold mínimo parametrizável
-- [ ] AC-015: Ordenação determinística (score desc, id asc como tiebreaker)
-- [ ] AC-016: Rayon com `max_threads` configurável
-- [ ] AC-017: Recall@10 ≥ 0.85 (dataset sintético)
-- [ ] AC-018: p95 < 50ms para 100k vetores
+### Specific
+- [ ] AC-010: Cosine similarity: `1.0` for identical vectors, `0.0` for orthogonal, `-1.0` for opposite
+- [ ] AC-011: Prime similarity via normalized GCD
+- [ ] AC-012: Hybrid search with configurable weights (`cosine_weight`, `prime_weight`)
+- [ ] AC-013: SIMD (AVX2) active with safe fallback
+- [ ] AC-014: Early pruning with parameterizable minimum threshold
+- [ ] AC-015: Deterministic sorting (score desc, id asc as tiebreaker)
+- [ ] AC-016: Rayon with configurable `max_threads`
+- [ ] AC-017: Recall@10 ≥ 0.85 (synthetic dataset)
+- [ ] AC-018: p95 < 50ms for 100k vectors
 
 ---
 
 ## 3. Definition of Done (DoD)
 
-- [ ] SIMD ativo (AVX2 ou fallback)
-- [ ] Prime similarity implementado e testado
-- [ ] Paralelismo Rayon funcional e configurável
-- [ ] Early pruning funcional
-- [ ] Determinismo garantido (variação < 1%)
-- [ ] Testes unitários ≥ 80% cobertura
-- [ ] Testes funcionais passando em CI
-- [ ] Benchmark baseline registrado
-- [ ] Sem `unwrap()` em código de produção
-- [ ] Code review aprovado
+- [ ] SIMD active (AVX2 or fallback)
+- [ ] Prime similarity implemented and tested
+- [ ] Rayon parallelism functional and configurable
+- [ ] Functional early pruning
+- [ ] Guaranteed determinism (variation < 1%)
+- [ ] Unit tests ≥ 80% coverage
+- [ ] Functional tests passing in CI
+- [ ] Baseline benchmark registered
+- [ ] No `unwrap()` in production code
+- [ ] Code review approved
 
 ---
 
-## 4. Exemplos de Uso
+## 4. Usage Examples
 
-### Busca híbrida top-5
+### Hybrid search top-5
 
-**Entrada (JSON):**
+**Input (JSON):**
 ```json
 {
   "query_vector": [0.12, 0.85, 0.33, 0.67],
@@ -61,7 +61,7 @@ O Retrieval Engine é o primeiro estágio do pipeline cognitivo do KCE. Realiza 
 }
 ```
 
-**Saída:**
+**Output:**
 ```json
 {
   "results": [
@@ -74,116 +74,116 @@ O Retrieval Engine é o primeiro estágio do pipeline cognitivo do KCE. Realiza 
 }
 ```
 
-### Erro — dimensão incompatível
+### Error — dimension mismatch
 ```json
 { "error": "DIMENSION_MISMATCH", "message": "Query dim (3) != dataset dim (4)", "code": 400 }
 ```
 
 ---
 
-## 5. Planos de Teste
+## 5. Test Plans
 
-### 5.1 Testes Unitários
+### 5.1 Unit Tests
 
-| ID | Caso | Entrada | Saída Esperada |
+| ID | Case | Input | Expected Output |
 |----|------|---------|----------------|
-| UT-001 | Cosine — vetores idênticos | `[1,0], [1,0]` | `1.0` |
-| UT-002 | Cosine — ortogonais | `[1,0], [0,1]` | `0.0` |
-| UT-003 | Cosine — opostos | `[1,0], [-1,0]` | `-1.0` |
-| UT-004 | Cosine — vetor zero | `[0,0], [1,0]` | `0.0` (sem panic) |
-| UT-005 | Prime — GCD máximo | `12, 12` | `1.0` |
-| UT-006 | Hybrid — peso 50/50 | cos=0.8, prime=0.6 | `0.7` |
-| UT-007 | Top-k > dataset | dataset=3, k=10 | `3 resultados` |
-| UT-008 | Ordering — scores iguais | score=0.5, score=0.5 | `menor id primeiro` |
+| UT-001 | Cosine — identical vectors | `[1,0], [1,0]` | `1.0` |
+| UT-002 | Cosine — orthogonal | `[1,0], [0,1]` | `0.0` |
+| UT-003 | Cosine — opposite | `[1,0], [-1,0]` | `-1.0` |
+| UT-004 | Cosine — zero vector | `[0,0], [1,0]` | `0.0` (no panic) |
+| UT-005 | Prime — maximum GCD | `12, 12` | `1.0` |
+| UT-006 | Hybrid — 50/50 weight | cos=0.8, prime=0.6 | `0.7` |
+| UT-007 | Top-k > dataset | dataset=3, k=10 | `3 results` |
+| UT-008 | Ordering — equal scores | score=0.5, score=0.5 | `smallest id first` |
 
-**Falhas esperadas:**
+**Expected failures:**
 
-| ID | Caso | Comportamento |
+| ID | Case | Behavior |
 |----|------|---------------|
-| UF-001 | Dimensão incompatível | `Err(DimensionMismatch)` |
-| UF-002 | Vetor vazio | `Err(EmptyVector)` |
+| UF-001 | Dimension mismatch | `Err(DimensionMismatch)` |
+| UF-002 | Empty vector | `Err(EmptyVector)` |
 | UF-003 | Top-k = 0 | `Err(InvalidK)` |
-| UF-004 | NaN em vetor | `Err(InvalidVector)` |
+| UF-004 | NaN in vector | `Err(InvalidVector)` |
 
-### 5.2 Testes Funcionais
+### 5.2 Functional Tests
 
-| ID | Cenário | Resultado Esperado |
+| ID | Scenario | Expected Result |
 |----|---------|---------------------|
-| FT-001 | Inserir 10k vetores + query | Top-10 consistente, scores decrescentes |
-| FT-002 | 50 queries concorrentes | Todos retornam sem erro |
-| FT-003 | Performance 100k vetores | p95 < 50ms |
+| FT-001 | Insert 10k vectors + query | Consistent Top-10, descending scores |
+| FT-002 | 50 concurrent queries | All return without error |
+| FT-003 | 100k vectors performance | p95 < 50ms |
 
-### 5.3 Testes de Integração
+### 5.3 Integration Tests
 
-| ID | Componentes | Resultado |
+| ID | Components | Result |
 |----|-------------|-----------|
-| IT-001 | Retrieval → Graph | Candidatos expandidos com vizinhos |
-| IT-002 | Retrieval → ECMA | Maturidade dos nós atualizada |
-| IT-003 | API → Retrieval | HTTP 200 com JSON válido |
+| IT-001 | Retrieval → Graph | Candidates expanded with neighbors |
+| IT-002 | Retrieval → ECMA | Node maturity updated |
+| IT-003 | API → Retrieval | HTTP 200 with valid JSON |
 
 ---
 
-## 6. Formato CARE
+## 6. CARE Format
 
-**Context:** Primeiro estágio do pipeline cognitivo; busca vetorial híbrida para retrieval semântico de alta qualidade em datasets de até 1M+ vetores.
+**Context:** First stage of the cognitive pipeline; hybrid vector search for high-quality semantic retrieval in datasets up to 1M+ vectors.
 
-**Assumptions:** CPU alvo suporta AVX2 (fallback existe); vetores normalizados L2; dataset cabe em memória/mmap; concorrência via `Arc<RwLock>`.
+**Assumptions:** Target CPU supports AVX2 (fallback exists); L2 normalized vectors; dataset fits in memory/mmap; concurrency via `Arc<RwLock>`.
 
-**Requirements:** R-001: SIMD cosine | R-002: Prime via GCD | R-003: Hybrid com pesos | R-004: p95 < 50ms (100k) | R-005: Recall@10 ≥ 0.85 | R-006: Determinismo < 1% variação.
+**Requirements:** R-001: SIMD cosine | R-002: Prime via GCD | R-003: Hybrid with weights | R-004: p95 < 50ms (100k) | R-005: Recall@10 ≥ 0.85 | R-006: Determinism < 1% variation.
 
 **Evidence:** `benches/retrieval_bench.rs` | `testdata/synth_100k_128d.bin` | `reports/recall_analysis.md`
 
 ---
 
-## 7. Critérios Não Funcionais
+## 7. Non-Functional Criteria
 
-| Aspecto | Métrica | Alvo |
+| Aspect | Metric | Target |
 |---------|---------|------|
-| Latência p50 | 100k vetores | < 20ms |
-| Latência p95 | 100k vetores | < 50ms |
+| Latency p50 | 100k vectors | < 20ms |
+| Latency p95 | 100k vectors | < 50ms |
 | Throughput | queries/s | ≥ 500 |
-| Memória | vs tamanho dataset | < 2x |
+| Memory | vs dataset size | < 2x |
 
 ---
 
-## 8. Qualidade e Métricas
+## 8. Quality and Metrics
 
-**Sucesso:** Recall@10 ≥ 0.85 | Precision@10 ≥ 0.70 | Variação < 1% | Cobertura ≥ 80%
+**Success:** Recall@10 ≥ 0.85 | Precision@10 ≥ 0.70 | Variation < 1% | Coverage ≥ 80%
 
-**Falha (BLOQUEANTE):** Recall@10 < 0.70 | p95 > 100ms | Crash em teste funcional | Variação > 5%
+**Failure (BLOCKING):** Recall@10 < 0.70 | p95 > 100ms | Crash in functional test | Variation > 5%
 
 ---
 
-## 9. Compatibilidade e Dependências
+## 9. Compatibility and Dependencies
 
-| Crate | Versão | Propósito |
+| Crate | Version | Purpose |
 |-------|--------|-----------|
-| `rayon` | ^1.8 | Paralelismo |
-| `parking_lot` | ^0.12 | RwLock otimizado |
+| `rayon` | ^1.8 | Parallelism |
+| `parking_lot` | ^0.12 | Optimized RwLock |
 
-**Deps internas:** KineSQL (leitura vetores), Graph Engine (consumo candidatos), ECMA (maturidade)  
-**Rust:** ≥ 1.75 | **OS:** Linux (prod), macOS (dev) | **CPU:** x86_64 AVX2 (preferencial)
+**Internal deps:** KineSQL (vector reading), Graph Engine (candidate consumption), ECMA (maturity)  
+**Rust:** ≥ 1.75 | **OS:** Linux (prod), macOS (dev) | **CPU:** x86_64 AVX2 (preferred)
 
 ---
 
-## 10. Rastreabilidade
+## 10. Traceability
 
-| Tipo | ID | Descrição |
+| Type | ID | Description |
 |------|----|-----------|
-| Spec | FT-001-RETRIEVAL-ENGINE | Esta especificação |
-| Código | `src/retrieval/mod.rs` | Implementação |
+| Spec | FT-001-RETRIEVAL-ENGINE | This specification |
+| Code | `src/retrieval/mod.rs` | Implementation |
 | Bench | `benches/retrieval_bench.rs` | Benchmark |
-| Teste | `tests/retrieval_integration.rs` | Integração |
+| Test | `tests/retrieval_integration.rs` | Integration |
 
 ---
 
-## 11. Roadmap MVP
+## 11. MVP Roadmap
 
-### MVP (Semana 1-2)
-Cosine similarity scalar | Top-k retrieval | 5+ testes unitários | API interna `retrieve(query, dataset, k)`
+### MVP (Week 1-2)
+Scalar cosine similarity | Top-k retrieval | 5+ unit tests | Internal API `retrieve(query, dataset, k)`
 
-### Iteração 1 (Semana 3-4)
-SIMD AVX2 + fallback | Prime similarity | Hybrid scoring | Rayon | Benchmark baseline | p95 < 50ms
+### Iteration 1 (Week 3-4)
+SIMD AVX2 + fallback | Prime similarity | Hybrid scoring | Rayon | Baseline benchmark | p95 < 50ms
 
-### Iteração 2 (Semana 5-6)
-Early pruning | Determinismo validado | Error handling completo | Integração KineSQL + Graph | Testes de carga 500 qps | Docs completos
+### Iteration 2 (Week 5-6)
+Early pruning | Validated determinism | Complete error handling | KineSQL + Graph integration | 500 qps load tests | Complete docs
