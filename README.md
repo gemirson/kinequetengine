@@ -2,7 +2,7 @@
 
 **Bio-Inspired Context Engine for AI/ML in Rust**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-258%20passing-brightgreen)]()
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)]()
 [![CI](https://github.com/kinecontext/kce/actions/workflows/ci.yml/badge.svg)]()
@@ -280,4 +280,4 @@ cargo bench
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE) license. Commercial use is strictly prohibited without prior written authorization.
