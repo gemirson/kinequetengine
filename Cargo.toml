@@ -85,6 +85,7 @@ kce-graph = { workspace = true }
 kce-ecma = { workspace = true }
 kce-mce = { workspace = true }
 kce-ais = { workspace = true }
+rayon = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
@@ -95,6 +96,10 @@ harness = false
 
 [[bench]]
 name = "metrics_bench"
+harness = false
+
+[[bench]]
+name = "kce_stress_bench"
 harness = false
 
 [lints]

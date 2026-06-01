@@ -7,8 +7,6 @@
 use std::collections::VecDeque;
 
 use kce_core::error::MetricError;
-use kce_core::traits::DistanceMetric;
-use kce_metrics::wasserstein::WassersteinMetric;
 use serde::{Deserialize, Serialize};
 
 /// Result of anomaly detection.
@@ -54,8 +52,6 @@ pub struct ImmuneDetector {
     /// Known "normal" patterns (antibodies).
     patterns: Vec<Vec<f64>>,
     config: DetectorConfig,
-    /// Wasserstein metric for distribution shift detection (FT-023).
-    wasserstein: WassersteinMetric,
     /// Number of detect() calls made (for warm-up tracking).
     call_count: usize,
     /// Maximum distance seen (for normalization).
@@ -77,7 +73,6 @@ impl ImmuneDetector {
         Self {
             patterns: Vec::new(),
             config,
-            wasserstein: WassersteinMetric::new(),
             call_count: 0,
             max_distance_seen: 1.0,
             window: VecDeque::new(),
@@ -105,11 +100,6 @@ impl ImmuneDetector {
     /// Get the current call count.
     pub fn call_count(&self) -> usize {
         self.call_count
-    }
-
-    /// Detect whether a vector shift (distribution shift) is anomalous using Wasserstein.
-    pub fn detect_shift(&self, baseline: &[f64], current: &[f64]) -> Result<f64, MetricError> {
-        self.wasserstein.compute(baseline, current)
     }
 
     /// Detect whether a vector is anomalous.

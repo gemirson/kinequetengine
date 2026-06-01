@@ -705,12 +705,8 @@ impl PipelineOrchestrator {
     }
 
     /// Stage 3: Planning — determines retrieval strategy based on context.
-    fn stage_plan(&self, ctx: &ContextInput) -> Result<(), KceError> {
-        // Plan stage: determine if we need OT re-ranking based on vector complexity
-        let complexity = ctx.query_vector.iter().map(|v| v.abs()).sum::<f64>();
-        if complexity > 10.0 {
-            tracing::debug!("High complexity query detected, planning for OT re-ranking");
-        }
+    fn stage_plan(&self, _ctx: &ContextInput) -> Result<(), KceError> {
+        // Plan stage: determine retrieval strategy
         Ok(())
     }
 
@@ -1038,7 +1034,6 @@ mod tests {
         assert!(!d.skipped_graph);
         assert!(!d.skipped_ecma);
         assert!(!d.skipped_mce);
-        assert!(!d.skipped_ot);
     }
 
     #[test]
@@ -1050,7 +1045,6 @@ mod tests {
         assert!(d.skipped_graph);
         assert!(!d.skipped_ecma); // remaining=2.5 >= ecma_threshold=2.0
         assert!(!d.skipped_mce);
-        assert!(!d.skipped_ot);
     }
 
     #[test]
@@ -1062,7 +1056,6 @@ mod tests {
         assert!(d.skipped_graph);
         assert!(d.skipped_ecma);
         assert!(!d.skipped_mce); // remaining=1.5 >= mce_threshold=1.0
-        assert!(!d.skipped_ot);  // remaining=1.5, not < 1.5
     }
 
     #[test]
@@ -1074,7 +1067,6 @@ mod tests {
         assert!(d.skipped_graph);
         assert!(d.skipped_ecma);
         assert!(d.skipped_mce);
-        assert!(d.skipped_ot);
     }
 
     #[test]
@@ -1086,7 +1078,6 @@ mod tests {
         assert!(d.skipped_graph);
         assert!(d.skipped_ecma);
         assert!(d.skipped_mce);
-        assert!(d.skipped_ot);
     }
 
     #[test]

@@ -22,7 +22,7 @@ KCE utilizes algorithms extracted from biology to solve critical AI infrastructu
 - **ECMA Engine:** Inspired by stem cells and apoptosis, the database manages the data lifecycle autonomously. Irrelevant information decays and is automatically removed, keeping the system memory clean and up-to-date.
 
 ### 🚀 From Context to Execution (mRNA/MCE)
-While competitors return only raw text, KCE introduces **mRNA Cognitive Execution**. It compiles the retrieved context into an executable binary payload. This transforms vector search into active decision-making, drastically reducing token consumption and execution latency for AI agents by over 50%.
+The crown jewel of KCE is **mRNA Cognitive Execution**. While competitors return only raw text, KCE compiles retrieved context into an executable binary payload. This transforms vector search into active decision-making, drastically reducing token consumption and execution latency for AI agents by over 50%.
 
 ### 🤖 Agent-Native (MCP)
 KCE speaks the native language of modern agents. With native support for the **Model Context Protocol (MCP)**, it integrates instantly with tools like Cursor and Claude Desktop, allowing AI agents to query and configure the engine autonomously and dynamically.
@@ -94,7 +94,7 @@ Inspired by Jerne's Immune Network Theory, the system self-regulates. It monitor
 | Crate | Purpose |
 |---|---|
 | `kce-core` | Shared types, errors, traits |
-| `kce-retrieval` | Hybrid vector search (cosine SIMD, prime GCD) |
+| `kce-retrieval` | Vector search (cosine SIMD) |
 | `kce-graph` | Semantic graph expansion (BFS/DFS, edge weights) |
 | `kce-ecma` | Entity lifecycle state machine (Stem -> Specialized -> Mature -> Apoptosis) |
 | `kce-mce` | mRNA Cognitive Engine (encode context, decode intent, execute action) |
@@ -103,7 +103,7 @@ Inspired by Jerne's Immune Network Theory, the system self-regulates. It monitor
 | `kce-api` | Axum REST API with OpenAPI/Swagger |
 | `kce-aco` | Ant Colony Optimization (pheromone routing, evaporation, exploration) |
 | `kce-ais` | Artificial Immune System (detection, classification, regulation) |
-| `kce-metrics` | Distance metrics (cosine, Wasserstein, Sinkhorn) + latency histogram |
+| `kce-metrics` | Distance metrics (cosine) + latency histogram |
 | `kce-server` | Binary entry point |
 
 ---
@@ -304,8 +304,11 @@ cargo clippy -- -D warnings
 # Check formatting
 cargo fmt --all -- --check
 
-# Run benchmarks
-cargo bench
+# Run basic benchmarks
+cargo bench --bench pipeline_bench
+
+# Run stress benchmarks (high concurrency)
+cargo bench --bench kce_stress_bench
 ```
 
 ---
@@ -313,3 +316,4 @@ cargo bench
 ## License
 
 This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](LICENSE) license. Commercial use is strictly prohibited without prior written authorization.
+zation.

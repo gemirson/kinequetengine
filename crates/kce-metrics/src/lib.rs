@@ -8,6 +8,3 @@
 
 pub mod cosine;
 pub mod latency;
-pub mod prime;
-pub mod sinkhorn;
-pub mod wasserstein;

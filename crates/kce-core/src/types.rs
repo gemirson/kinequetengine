@@ -65,8 +65,6 @@ pub struct SearchResult {
     pub score: f64,
     /// Cosine similarity component.
     pub cosine_score: f64,
-    /// Prime similarity component.
-    pub prime_score: f64,
 }
 
 /// ECMA node lifecycle states.

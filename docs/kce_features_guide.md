@@ -147,7 +147,49 @@ These features describe the algorithms guiding the dynamic adaptation of the con
 
 ---
 
-## 🛡️ 9. AIS — Artificial Immune System
+---
+
+## ⚙️ 5. Infrastructure
+
+### FT-010: High-Performance Concurrency
+* **What it is:** The CPU resource manager for concurrent operations.
+* **How it works:** Replaces heavy OS locks with lightweight user-space primitives (`parking_lot::RwLock`) and lock-free execution paths.
+* **Value:** Maximizes multi-core CPU utilization by eliminating context-switching overhead.
+
+### FT-012: Cloud-Native Deploy
+* **What it is:** The containerization and deployment infrastructure of KCE.
+* **How it works:** Packages KCE into light Docker images, providing orchestration templates via docker-compose and Kubernetes probes (`liveness` and `readiness`).
+* **Value:** Facilitates fast, scalable, and agnostically deployed infrastructure across cloud providers.
+
+---
+
+## 🐜 6. ACO — Ant Colony Optimization
+
+These features describe the algorithms guiding the dynamic adaptation of the context graph based on virtual pheromone trails.
+
+### FT-013: Pheromone Routing
+* **What it is:** The core path-guidance engine.
+* **How it works:** Tracks queries traversing the graph. Visited edges deposit digital pheromones that future ants use as transition guides.
+* **Value:** Allows the database to learn and prioritize semantic relationships based on real usage patterns.
+
+### FT-014: Pheromone Evaporation
+* **What it is:** The temporal forgetting mechanism for obsolete paths.
+* **How it works:** Gradually decays pheromone density on all edges using the decay constant $\rho$.
+* **Value:** Prevents search stagnation on outdated paths, keeping the routing system adaptive.
+
+### FT-015: Ant Exploration
+* **What it is:** Parallel search exploration.
+* **How it works:** Spawns multiple concurrent search ants using stochastic (probabilistic) transition rules to explore alternative routes.
+* **Value:** Avoids local minima, discovering latent contexts that greedy search strategies would ignore.
+
+### FT-016: Colony Optimization
+* **What it is:** The global calibration of the ACO algorithm.
+* **How it works:** Optimizes query parameters, ant counts, and convergence targets over multiple cycles.
+* **Value:** Balances retrieval precision and CPU resource consumption.
+
+---
+
+## 🛡️ 7. AIS — Artificial Immune System
 
 Features implementing threat detection, semantic anomaly blocking, and homeostasis.
 

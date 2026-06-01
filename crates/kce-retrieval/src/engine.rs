@@ -7,8 +7,6 @@ use kce_core::error::KceError;
 use kce_core::traits::DistanceMetric;
 use kce_core::types::SearchResult;
 use kce_metrics::cosine::CosineMetric;
-use kce_metrics::prime::PrimeMetric;
-use kce_metrics::wasserstein::WassersteinMetric;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -17,27 +15,18 @@ use serde::{Deserialize, Serialize};
 pub struct RetrievalConfig {
     /// Weight for cosine similarity (0.0 .. 1.0).
     pub cosine_weight: f64,
-    /// Weight for prime similarity (0.0 .. 1.0).
-    pub prime_weight: f64,
     /// Minimum score threshold for early pruning.
     pub threshold: f64,
     /// Maximum number of threads for parallel search.
     pub max_threads: usize,
-    /// Enable Wasserstein re-ranking (FT-023).
-    pub enable_ot_rerank: bool,
-    /// Top-K candidates for re-ranking.
-    pub rerank_top_k: usize,
 }
 
 impl Default for RetrievalConfig {
     fn default() -> Self {
         Self {
-            cosine_weight: 0.7,
-            prime_weight: 0.3,
+            cosine_weight: 1.0,
             threshold: 0.1,
             max_threads: 4,
-            enable_ot_rerank: true,
-            rerank_top_k: 50,
         }
     }
 }
@@ -95,8 +84,6 @@ impl Dataset {
 pub struct RetrievalEngine {
     config: RetrievalConfig,
     cosine: CosineMetric,
-    prime: PrimeMetric,
-    wasserstein: WassersteinMetric,
 }
 
 impl RetrievalEngine {
@@ -105,8 +92,6 @@ impl RetrievalEngine {
         Self {
             config,
             cosine: CosineMetric::new(),
-            prime: PrimeMetric::new(),
-            wasserstein: WassersteinMetric::new(),
         }
     }
 
@@ -142,9 +127,7 @@ impl RetrievalEngine {
         // Score all vectors in parallel via Rayon (FT-001 AC-016).
         let threshold = self.config.threshold;
         let cw = self.config.cosine_weight;
-        let pw = self.config.prime_weight;
         let cosine = &self.cosine;
-        let prime = &self.prime;
 
         let mut results: Vec<SearchResult> = dataset
             .ids
@@ -153,8 +136,7 @@ impl RetrievalEngine {
             .enumerate()
             .filter_map(|(_i, (id, vector))| {
                 let cosine_score = cosine.compute(query, vector).ok()?;
-                let prime_score = prime.compute(query, vector).ok()?;
-                let combined = cw * cosine_score + pw * prime_score;
+                let combined = cw * cosine_score;
                 if combined < threshold {
                     return None;
                 }
@@ -162,7 +144,6 @@ impl RetrievalEngine {
                     id: *id,
                     score: combined,
                     cosine_score,
-                    prime_score,
                 })
             })
             .collect();
@@ -173,34 +154,6 @@ impl RetrievalEngine {
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then(a.id.cmp(&b.id))
         });
-
-        // Optional OT Re-ranking (FT-023)
-        if self.config.enable_ot_rerank && results.len() > 1 {
-            let rerank_count = results.len().min(self.config.rerank_top_k);
-            let candidates = &mut results[..rerank_count];
-
-            // Real OT re-ranking using Wasserstein metric
-            for res in candidates.iter_mut() {
-                // Find vector in dataset
-                if let Some(idx) = dataset.ids.iter().position(|id| *id == res.id) {
-                    let vector = &dataset.vectors[idx];
-                    if let Ok(ot_dist) = self.wasserstein.compute(query, vector) {
-                        // Adjust score: combine hybrid score with OT distance
-                        // Normalized Wasserstein for re-ranking
-                        let ot_score = 1.0 / (1.0 + ot_dist);
-                        res.score = res.score * 0.8 + ot_score * 0.2;
-                    }
-                }
-            }
-
-            // Re-sort after OT adjustment
-            results.sort_by(|a, b| {
-                b.score
-                    .partial_cmp(&a.score)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                    .then(a.id.cmp(&b.id))
-            });
-        }
 
         results.truncate(top_k);
         Ok(results)
