@@ -1,4 +1,4 @@
-# KineQuetEngine (KCE)
+# <img src="docs/logo.svg" width="400" alt="KineQuetEngine Logo">
 
 **Bio-Inspired Context Engine for AI/ML in Rust**
 
