@@ -110,13 +110,11 @@ impl Colony {
             );
 
             // Find best ant this iteration
-            let iter_best = ant_results
-                .iter()
-                .min_by(|a, b| {
-                    a.cost
-                        .partial_cmp(&b.cost)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
+            let iter_best = ant_results.iter().min_by(|a, b| {
+                a.cost
+                    .partial_cmp(&b.cost)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
 
             if let Some(best_ant) = iter_best {
                 let iter_cost = best_ant.cost;

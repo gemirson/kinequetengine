@@ -353,9 +353,21 @@ async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoRespons
 
     // FT-024: Read latency percentiles from pipeline histogram.
     let snap = state.pipeline.metrics.latency_histogram.percentiles();
-    let graph_skips = state.pipeline.metrics.degraded_graph_skips.load(Ordering::Relaxed);
-    let ecma_skips = state.pipeline.metrics.degraded_ecma_skips.load(Ordering::Relaxed);
-    let mce_skips = state.pipeline.metrics.degraded_mce_skips.load(Ordering::Relaxed);
+    let graph_skips = state
+        .pipeline
+        .metrics
+        .degraded_graph_skips
+        .load(Ordering::Relaxed);
+    let ecma_skips = state
+        .pipeline
+        .metrics
+        .degraded_ecma_skips
+        .load(Ordering::Relaxed);
+    let mce_skips = state
+        .pipeline
+        .metrics
+        .degraded_mce_skips
+        .load(Ordering::Relaxed);
 
     let metrics = format!(
         "# HELP kce_query_latency_ms Query latency in milliseconds\n\
@@ -486,7 +498,7 @@ async fn action_handler(
 mod tests {
     use super::*;
     use axum::body::Body;
-    use axum::http::{Request, header};
+    use axum::http::{header, Request};
     use http_body_util::BodyExt;
     use kce_pipeline::orchestrator::PipelineConfig;
     use kce_retrieval::engine::Dataset;
@@ -529,7 +541,10 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["error"], "VALIDATION_ERROR");
         assert!(
-            json["message"].as_str().unwrap().contains("Missing x-tenant-id"),
+            json["message"]
+                .as_str()
+                .unwrap()
+                .contains("Missing x-tenant-id"),
             "Expected 'Missing x-tenant-id' in message, got: {}",
             json["message"]
         );
@@ -557,7 +572,10 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(json["error"], "VALIDATION_ERROR");
         assert!(
-            json["message"].as_str().unwrap().contains("Invalid x-tenant-id"),
+            json["message"]
+                .as_str()
+                .unwrap()
+                .contains("Invalid x-tenant-id"),
             "Expected 'Invalid x-tenant-id' in message, got: {}",
             json["message"]
         );

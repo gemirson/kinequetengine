@@ -154,10 +154,10 @@ impl LatencyHistogram {
 
         // Target sample indices for each percentile.
         let targets = [
-            (count * 500) / 1000,    // p50
-            (count * 950) / 1000,    // p95
-            (count * 990) / 1000,    // p99
-            (count * 999) / 1000,    // p999
+            (count * 500) / 1000, // p50
+            (count * 950) / 1000, // p95
+            (count * 990) / 1000, // p99
+            (count * 999) / 1000, // p999
         ];
         let mut results = [0u64; 4];
         let mut found = [false; 4];
@@ -304,7 +304,7 @@ mod tests {
             max_latency_us: 1000, // only 10 buckets, up to 1ms
         };
         let h = LatencyHistogram::with_config(config);
-        h.record_us(500);   // in range
+        h.record_us(500); // in range
         h.record_us(50_000); // overflow (50ms)
         assert_eq!(h.count(), 2);
         let snap = h.percentiles();

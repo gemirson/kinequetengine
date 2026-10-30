@@ -2,9 +2,9 @@
 //!
 //! Implements Ant-Colony Task Allocation (ACTA) for dynamic data distribution.
 
-use std::collections::HashMap;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Unique identifier for a cluster node.
@@ -67,16 +67,21 @@ impl ShardRouter {
     pub fn route(&self, shard: &Shard) -> NodeId {
         let shard_map = self.shard_map.read();
         let primary = shard_map.get(shard).cloned().unwrap_or(self.local_node_id);
-        
+
         // ACTA Delegation (FT-028 AC-011)
         if primary == self.local_node_id {
             let loads = self.node_loads.read();
             if let Some(load) = loads.get(&self.local_node_id) {
                 if load.cpu_utilization > 0.85 {
                     // Find least loaded node hosting a replica (simplified for MVP: any other node)
-                    if let Some(alternate) = loads.iter()
+                    if let Some(alternate) = loads
+                        .iter()
                         .filter(|(id, _)| **id != self.local_node_id)
-                        .min_by(|a, b| a.1.cpu_utilization.partial_cmp(&b.1.cpu_utilization).unwrap())
+                        .min_by(|a, b| {
+                            a.1.cpu_utilization
+                                .partial_cmp(&b.1.cpu_utilization)
+                                .unwrap()
+                        })
                     {
                         tracing::debug!(?shard, "ACTA: delegating query to node {}", alternate.0);
                         return *alternate.0;
@@ -84,7 +89,7 @@ impl ShardRouter {
                 }
             }
         }
-        
+
         primary
     }
 

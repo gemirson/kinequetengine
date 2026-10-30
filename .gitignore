@@ -9,3 +9,8 @@ Cargo.lock
 .agents/
 .openclaude/
 *.pdf
+
+# Web dashboard
+dashboard/node_modules/
+dashboard/dist/
+

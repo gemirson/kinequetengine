@@ -2,9 +2,9 @@
 //!
 //! Run with: `cargo bench --bench retrieval_bench`
 
+use kce_core::traits::DistanceMetric;
 use kce_metrics::cosine::CosineMetric;
 use kce_metrics::prime::PrimeMetric;
-use kce_core::traits::DistanceMetric;
 
 fn cosine_bench() {
     let m = CosineMetric::new();

@@ -67,7 +67,8 @@ fn bench_retrieval_search(c: &mut Criterion) {
     for &top_k in &[1, 5, 10, 50] {
         group.bench_function(format!("top_k={top_k}"), |b| {
             b.iter(|| {
-                let results = engine.search(black_box(&query), black_box(&dataset), black_box(top_k));
+                let results =
+                    engine.search(black_box(&query), black_box(&dataset), black_box(top_k));
                 black_box(&results);
             });
         });

@@ -12,15 +12,17 @@ use std::time::{Duration, Instant};
 
 use kce_aco::pheromone::{PheromoneConfig, PheromoneMap};
 use kce_ais::memory::{AntigenMemory, MemoryConfig};
-use kce_swarm::sharding::ShardRouter;
 use kce_core::error::KceError;
 use kce_core::traits::StorageBackend;
-use kce_core::types::{ActionResult, ContextInput, ContextOutput, EcmaNode, MrnaIntent, NodeState, SearchResult};
+use kce_core::types::{
+    ActionResult, ContextInput, ContextOutput, EcmaNode, MrnaIntent, NodeState, SearchResult,
+};
 use kce_ecma::engine::EcmaEngine;
 use kce_graph::graph::SemanticGraph;
-use kce_metrics::latency::LatencyHistogram;
 use kce_mce::engine::MceEngine;
+use kce_metrics::latency::LatencyHistogram;
 use kce_retrieval::engine::{Dataset, RetrievalConfig, RetrievalEngine};
+use kce_swarm::sharding::ShardRouter;
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -426,10 +428,7 @@ impl PipelineOrchestrator {
             ))),
             shard_router: std::sync::Arc::new(ShardRouter::new(local_node_id)),
             storage: None,
-            cache: parking_lot::Mutex::new(IdempotencyCache::new(
-                1024,
-                Duration::from_secs(300),
-            )),
+            cache: parking_lot::Mutex::new(IdempotencyCache::new(1024, Duration::from_secs(300))),
             circuit_breaker: parking_lot::Mutex::new(CircuitBreaker::new()),
             metrics: PipelineMetrics::new(),
             budget: LatencyBudget::default(),
@@ -481,7 +480,9 @@ impl PipelineOrchestrator {
     /// Execute the pipeline, potentially delegating to another node (FT-028).
     pub fn execute_distributed(&self, ctx: &ContextInput) -> Result<ContextOutput, KceError> {
         let context_hash = hash_request_id(&ctx.tenant_id);
-        let shard = self.shard_router.calculate_shard(&ctx.tenant_id, context_hash);
+        let shard = self
+            .shard_router
+            .calculate_shard(&ctx.tenant_id, context_hash);
         let target_node = self.shard_router.route(&shard);
 
         if target_node == self.shard_router.local_node_id {
@@ -528,10 +529,7 @@ impl PipelineOrchestrator {
 
         for attempt in 0u32..=2 {
             if attempt > 0 {
-                let delay = backoffs
-                    .get((attempt - 1) as usize)
-                    .copied()
-                    .unwrap_or(200);
+                let delay = backoffs.get((attempt - 1) as usize).copied().unwrap_or(200);
                 tracing::warn!(
                     request_id,
                     attempt,
@@ -600,7 +598,9 @@ impl PipelineOrchestrator {
 
         // Stage 5: Expand (conditionally skipped under time pressure)
         if degradation.skipped_graph {
-            self.metrics.degraded_graph_skips.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .degraded_graph_skips
+                .fetch_add(1, Ordering::Relaxed);
             stages.insert("expand".into(), 0.0);
         } else {
             let s = Instant::now();
@@ -610,7 +610,9 @@ impl PipelineOrchestrator {
 
         // Stage 6: ECMA Update (conditionally skipped)
         if degradation.skipped_ecma {
-            self.metrics.degraded_ecma_skips.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .degraded_ecma_skips
+                .fetch_add(1, Ordering::Relaxed);
             stages.insert("ecma_update".into(), 0.0);
         } else {
             let s = Instant::now();
@@ -620,7 +622,9 @@ impl PipelineOrchestrator {
 
         // Stage 7: MCE Encode (conditionally skipped)
         let mce_ctx = if degradation.skipped_mce {
-            self.metrics.degraded_mce_skips.fetch_add(1, Ordering::Relaxed);
+            self.metrics
+                .degraded_mce_skips
+                .fetch_add(1, Ordering::Relaxed);
             stages.insert("mce_encode".into(), 0.0);
             // Return a default/simplified MCE context
             KceMceContext {
@@ -772,10 +776,7 @@ impl PipelineOrchestrator {
     }
 
     /// Stage 8: Execute action — execute the encoded mRNA instruction (FT-004).
-    fn stage_execute_action(
-        &self,
-        mce_ctx: &KceMceContext,
-    ) -> Result<ActionResult, KceError> {
+    fn stage_execute_action(&self, mce_ctx: &KceMceContext) -> Result<ActionResult, KceError> {
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()

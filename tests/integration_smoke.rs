@@ -280,12 +280,7 @@ fn stress_concurrent_resilience() {
             };
             let request_id = format!("req_stress_{}", i);
             let result = p.execute_with_resilience(&input, &request_id);
-            assert!(
-                result.is_ok(),
-                "thread {} failed: {:?}",
-                i,
-                result.err()
-            );
+            assert!(result.is_ok(), "thread {} failed: {:?}", i, result.err());
         }));
     }
 

@@ -81,9 +81,14 @@ unsafe fn avx2_dot_norms(a: &[f64], b: &[f64]) -> (f64, f64, f64) {
 
     // Handle trailing elements with scalar code.
     let remainder_start = chunks * 4;
-    let (tail_dot, tail_na, tail_nb) = scalar_dot_norms(&a[remainder_start..], &b[remainder_start..]);
+    let (tail_dot, tail_na, tail_nb) =
+        scalar_dot_norms(&a[remainder_start..], &b[remainder_start..]);
 
-    (dot_sum + tail_dot, norm_a_sum + tail_na, norm_b_sum + tail_nb)
+    (
+        dot_sum + tail_dot,
+        norm_a_sum + tail_na,
+        norm_b_sum + tail_nb,
+    )
 }
 
 /// Horizontal sum of a 256-bit register containing 4 f64 values.

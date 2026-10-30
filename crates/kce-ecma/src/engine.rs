@@ -15,9 +15,7 @@ pub struct EcmaEngine {
 impl EcmaEngine {
     /// Create a new ECMA engine with the given configuration.
     pub fn new(config: EcmaConfig) -> Self {
-        Self {
-            config,
-        }
+        Self { config }
     }
 
     /// Create with default configuration.

@@ -3,6 +3,7 @@
 //! Nodes evolve through: `Stem -> Progenitor -> Specialized` based on usage
 //! and entropy.  Obsolete nodes degrade to `Apoptosis`.
 
+use kce_core::caputo::CaputoState;
 use kce_core::error::KceError;
 use kce_core::types::{EcmaNode, NodeState};
 use serde::{Deserialize, Serialize};
@@ -100,6 +101,29 @@ pub fn maturity(node: &EcmaNode) -> f64 {
     score.clamp(0.0, 1.0)
 }
 
+/// FT-037: Evaluates entity lifecycle stage driven by Caputo fractional memory intensity and order alpha.
+///
+/// Modulates alpha dynamically:
+/// - `Stem`: alpha = 0.90 (high volatility, rapid forgetting if unreinforced)
+/// - `Progenitor`: alpha = 0.55 (intermediate retention)
+/// - `Specialized`: alpha = 0.15 (cortical consolidation, almost immune to apoptosis)
+/// - `Apoptosis`: vitality fell below survival threshold (< 0.05)
+pub fn evaluate_caputo_lifecycle(state: &mut CaputoState, now_ms: u64) -> NodeState {
+    let vitality = state.peek_intensity(now_ms);
+
+    if vitality < 0.05 {
+        NodeState::Apoptosis
+    } else if vitality > 50.0 && state.alpha > 0.20 {
+        state.modulate_alpha(0.15, now_ms);
+        NodeState::Specialized
+    } else if vitality > 15.0 && state.alpha > 0.60 {
+        state.modulate_alpha(0.55, now_ms);
+        NodeState::Progenitor
+    } else {
+        NodeState::Stem
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used)]
 mod tests {
@@ -190,5 +214,21 @@ mod tests {
         let stem = make_node(NodeState::Stem, 0, 0.9, 0);
         let spec = make_node(NodeState::Specialized, 20, 0.1, 10);
         assert!(maturity(&spec) > maturity(&stem));
+    }
+
+    #[test]
+    fn test_caputo_lifecycle_transitions() {
+        let mut state = CaputoState::new(0.90, 80.0, 1000);
+
+        // High vitality promotes to Specialized and reduces alpha to 0.15
+        let stage = evaluate_caputo_lifecycle(&mut state, 1000);
+        assert_eq!(stage, NodeState::Specialized);
+        assert_eq!(state.alpha, 0.15);
+
+        // An unreinforced volatile state (alpha = 0.95) decaying after 100 days
+        let mut decaying = CaputoState::new(0.95, 2.0, 1000);
+        let hundred_days_ms = 1000 + 100 * 24 * 3600 * 1000;
+        let stage_decayed = evaluate_caputo_lifecycle(&mut decaying, hundred_days_ms);
+        assert_eq!(stage_decayed, NodeState::Apoptosis);
     }
 }

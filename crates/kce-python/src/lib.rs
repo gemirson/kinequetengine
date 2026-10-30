@@ -6,11 +6,11 @@ use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use std::sync::Arc;
 
+use kce_ais::classifier::{AisClassifier, Classification};
 use kce_core::traits::DistanceMetric;
 use kce_metrics::cosine::CosineMetric;
 use kce_metrics::latency::LatencyHistogram;
 use kce_metrics::sinkhorn::{SinkhornConfig, SinkhornMetric};
-use kce_ais::classifier::{AisClassifier, Classification};
 use kce_retrieval::engine::{Dataset, RetrievalConfig, RetrievalEngine};
 
 /// Mapeia erros do KCE para exceções Python.
@@ -65,14 +65,18 @@ impl PyLatencyHistogram {
 #[pyfunction]
 fn sinkhorn_distance(a: Vec<f64>, b: Vec<f64>) -> PyResult<f64> {
     let metric = SinkhornMetric::with_defaults();
-    metric.compute(&a, &b).map_err(|e| PyValueError::new_err(e.to_string()))
+    metric
+        .compute(&a, &b)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
 /// Calcula a similaridade de cosseno entre dois vetores.
 #[pyfunction]
 fn cosine_similarity(a: Vec<f64>, b: Vec<f64>) -> PyResult<f64> {
     let metric = CosineMetric::new();
-    metric.compute(&a, &b).map_err(|e| PyValueError::new_err(e.to_string()))
+    metric
+        .compute(&a, &b)
+        .map_err(|e| PyValueError::new_err(e.to_string()))
 }
 
 /// Classificação imunológica (AIS).
@@ -82,28 +86,34 @@ fn classify(vector: Vec<f64>, self_patterns: Vec<Vec<f64>>) -> PyResult<(String,
     for p in self_patterns {
         classifier.add_self_pattern(p);
     }
-    
+
     let result = classifier.classify(&vector);
     let label = match result.label {
         Classification::Self_ => "self",
         Classification::NonSelf => "non-self",
     };
-    
+
     Ok((label.to_string(), result.confidence))
 }
 
 /// Executa busca híbrida KCE.
 #[pyfunction]
-fn retrieve(query_vector: Vec<f64>, dataset_vectors: Vec<(u64, Vec<f64>)>, top_k: usize) -> PyResult<Vec<(u64, f64)>> {
+fn retrieve(
+    query_vector: Vec<f64>,
+    dataset_vectors: Vec<(u64, Vec<f64>)>,
+    top_k: usize,
+) -> PyResult<Vec<(u64, f64)>> {
     let config = RetrievalConfig::default();
     let engine = RetrievalEngine::new(config);
     let mut ds = Dataset::new(query_vector.len());
-    
+
     for (id, vec) in dataset_vectors {
         ds.push(id, vec).map_err(map_kce_err)?;
     }
-    
-    let results = engine.search(&query_vector, &ds, top_k).map_err(map_kce_err)?;
+
+    let results = engine
+        .search(&query_vector, &ds, top_k)
+        .map_err(map_kce_err)?;
     Ok(results.into_iter().map(|r| (r.id, r.score)).collect())
 }
 

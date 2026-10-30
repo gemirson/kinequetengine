@@ -1,0 +1,64 @@
+name: Release & Tagging
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Generate Tag & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Next Semantic Version & Tag
+        id: semver
+        uses: paulhatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "v"
+          major_pattern: "(MAJOR)|BREAKING CHANGE:"
+          minor_pattern: "feat:"
+          version_format: "${major}.${minor}.${patch}"
+          bump_each_commit: false
+          search_commit_body: true
+
+      - name: Check if new tag is needed
+        id: check_tag
+        run: |
+          TAG="${{ steps.semver.outputs.version_tag }}"
+          echo "Generated tag candidate: $TAG"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists in git history. Skipping creation."
+            echo "should_create=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_create=true" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Git Tag
+        if: steps.check_tag.outputs.should_create == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.check_tag.outputs.tag_name }}" -m "Release ${{ steps.check_tag.outputs.tag_name }}"
+          git push origin "${{ steps.check_tag.outputs.tag_name }}"
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.should_create == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check_tag.outputs.tag_name }}
+          name: Release ${{ steps.check_tag.outputs.tag_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

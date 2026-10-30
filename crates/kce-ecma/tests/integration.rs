@@ -40,17 +40,31 @@ fn full_lifecycle_with_feedback_and_persistence() {
     node.usage_count = 6;
     node.connections = 2;
     engine.process_node(&mut node).expect("process stem");
-    assert_eq!(node.state, NodeState::Progenitor, "should evolve to Progenitor");
+    assert_eq!(
+        node.state,
+        NodeState::Progenitor,
+        "should evolve to Progenitor"
+    );
     let progenitor_maturity = node.maturity;
-    assert!(progenitor_maturity > 0.0, "maturity should be positive after evolution");
+    assert!(
+        progenitor_maturity > 0.0,
+        "maturity should be positive after evolution"
+    );
 
     // 3. Further advance: Progenitor -> Specialized
     node.usage_count = 12;
     node.connections = 5;
     node.entropy = 0.1;
     engine.process_node(&mut node).expect("process progenitor");
-    assert_eq!(node.state, NodeState::Specialized, "should evolve to Specialized");
-    assert!(node.maturity > progenitor_maturity, "maturity should increase");
+    assert_eq!(
+        node.state,
+        NodeState::Specialized,
+        "should evolve to Specialized"
+    );
+    assert!(
+        node.maturity > progenitor_maturity,
+        "maturity should increase"
+    );
 
     // 4. Apply MCE feedback (simulating successful execution)
     let feedback = ActionFeedback {
@@ -63,10 +77,7 @@ fn full_lifecycle_with_feedback_and_persistence() {
         node.maturity > maturity_before,
         "maturity should increase from feedback"
     );
-    assert!(
-        node.maturity <= 1.0,
-        "maturity should be clamped to 1.0"
-    );
+    assert!(node.maturity <= 1.0, "maturity should be clamped to 1.0");
 
     // 5. Persist to KineSQL and reload
     let mut db = make_db();
@@ -134,7 +145,10 @@ fn feedback_clamped_at_boundaries() {
         maturity_delta: 0.5,
     };
     EcmaEngine::apply_feedback(&mut node, &feedback);
-    assert!((node.maturity - 1.0).abs() < f64::EPSILON, "should clamp to 1.0");
+    assert!(
+        (node.maturity - 1.0).abs() < f64::EPSILON,
+        "should clamp to 1.0"
+    );
 
     // Feedback that would push below 0.0
     let negative_feedback = ActionFeedback {
@@ -142,7 +156,10 @@ fn feedback_clamped_at_boundaries() {
         maturity_delta: -2.0,
     };
     EcmaEngine::apply_feedback(&mut node, &negative_feedback);
-    assert!((node.maturity - 0.0).abs() < f64::EPSILON, "should clamp to 0.0");
+    assert!(
+        (node.maturity - 0.0).abs() < f64::EPSILON,
+        "should clamp to 0.0"
+    );
 }
 
 #[test]
@@ -185,5 +202,8 @@ fn persisted_node_survives_full_ecma_mce_roundtrip() {
         .expect("final load")
         .expect("exists");
     assert_eq!(final_node.state, NodeState::Progenitor);
-    assert!(final_node.maturity > 0.0, "maturity should reflect feedback");
+    assert!(
+        final_node.maturity > 0.0,
+        "maturity should reflect feedback"
+    );
 }

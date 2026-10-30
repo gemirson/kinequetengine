@@ -145,7 +145,7 @@ mod tests {
             decay_per_cycle: 1,
         });
         amp.trigger(1, AmplifyTrigger::AnomalyDetected(Severity::Low)); // 1 * 1.5 = 1.5 -> 2
-        // Need two cycles of decay to remove since round gives 2
+                                                                        // Need two cycles of decay to remove since round gives 2
         amp.decay_all(); // 2 - 1 = 1
         amp.decay_all(); // 1 - 1 = 0 -> removed
         assert_eq!(amp.active_count(), 0);
@@ -188,7 +188,7 @@ mod tests {
     fn severity_respects_max_priority() {
         let mut amp = ResponseAmplifier::default();
         amp.trigger(1, AmplifyTrigger::AnomalyDetected(Severity::Medium)); // 2 * 2.0 = 4
-        amp.trigger(1, AmplifyTrigger::MemoryHit(Severity::Critical));     // 2 * 5.0 = 10, total=14, capped to 10
+        amp.trigger(1, AmplifyTrigger::MemoryHit(Severity::Critical)); // 2 * 5.0 = 10, total=14, capped to 10
         assert_eq!(amp.get_level(1), 10);
     }
 

@@ -5,6 +5,7 @@
 //!
 //! Thread-safe via `Arc<parking_lot::RwLock<PheromoneMap>>`.
 
+use kce_core::caputo::CaputoState;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -46,6 +47,8 @@ pub struct PheromoneEntry {
     pub deposit_count: u64,
     /// Total amount deposited (for audit trail).
     pub total_deposited: f64,
+    /// FT-037: Optional Caputo hereditary memory state (48 bytes).
+    pub caputo: Option<CaputoState>,
 }
 
 /// Pheromone map — tracks pheromone scores on edges.
@@ -90,17 +93,67 @@ impl PheromoneMap {
     ///
     /// `amount` should be proportional to quality (e.g. 1/latency or recall_score).
     pub fn deposit(&mut self, from: u64, to: u64, amount: f64) {
-        let entry = self
-            .scores
-            .entry((from, to))
-            .or_insert(PheromoneEntry {
-                level: self.config.initial_tau,
-                deposit_count: 0,
-                total_deposited: 0.0,
-            });
+        let entry = self.scores.entry((from, to)).or_insert(PheromoneEntry {
+            level: self.config.initial_tau,
+            deposit_count: 0,
+            total_deposited: 0.0,
+            caputo: None,
+        });
         entry.level = (entry.level + amount).clamp(self.config.tau_min, self.config.tau_max);
         entry.deposit_count += 1;
         entry.total_deposited += amount;
+    }
+
+    /// FT-037: Evaluates edge pheromone intensity via Caputo fractional memory.
+    ///
+    /// Executes in ~3ns (lock-free) without mutating edge state. If the edge
+    /// has a CaputoState attached, returns its hereditary power-law intensity;
+    /// otherwise falls back to standard scalar pheromone `level`.
+    pub fn peek_fractional(&self, from: u64, to: u64, now_ms: u64) -> f64 {
+        if let Some(entry) = self.scores.get(&(from, to)) {
+            if let Some(ref caputo) = entry.caputo {
+                return caputo.peek_intensity(now_ms) as f64;
+            }
+            entry.level
+        } else {
+            self.config.initial_tau
+        }
+    }
+
+    /// FT-037: Injects reinforcement into the Caputo fractional hereditary state of an edge.
+    ///
+    /// Updates all 8 multi-scale modes in O(1), maintaining long-term fossil traces
+    /// in modes m_5..m_7 for instant recall of cognitive highways months or years later.
+    pub fn deposit_fractional(
+        &mut self,
+        from: u64,
+        to: u64,
+        amount: f64,
+        now_ms: u64,
+        alpha: f32,
+    ) -> f64 {
+        let initial_tau = self.config.initial_tau as f32;
+        let entry = self.scores.entry((from, to)).or_insert(PheromoneEntry {
+            level: self.config.initial_tau,
+            deposit_count: 0,
+            total_deposited: 0.0,
+            caputo: Some(CaputoState::new(alpha, initial_tau, now_ms)),
+        });
+
+        let updated_intensity = match entry.caputo {
+            Some(ref mut caputo) => caputo.step_and_reinforce(now_ms, amount as f32) as f64,
+            None => {
+                let mut state = CaputoState::new(alpha, entry.level as f32, now_ms);
+                let val = state.step_and_reinforce(now_ms, amount as f32) as f64;
+                entry.caputo = Some(state);
+                val
+            }
+        };
+
+        entry.level = updated_intensity.clamp(self.config.tau_min, self.config.tau_max);
+        entry.deposit_count += 1;
+        entry.total_deposited += amount;
+        entry.level
     }
 
     /// Get the current pheromone score for an edge.
@@ -347,6 +400,34 @@ mod tests {
             "node 30 selection count {} not within tolerance of {}",
             count_30,
             expected
+        );
+    }
+
+    #[test]
+    fn test_caputo_fractional_pheromone_fossil_recall() {
+        let mut map = PheromoneMap::new(PheromoneConfig::default());
+        let t0 = 10_000;
+
+        // Deposit with alpha=0.15 (deep cortical memory highway)
+        map.deposit_fractional(1, 2, 8.0, t0, 0.15);
+
+        // 90 days later (~7.77e9 ms) without any new deposits
+        let ninety_days_ms = t0 + 90 * 24 * 3600 * 1000;
+        let fossil_tau = map.peek_fractional(1, 2, ninety_days_ms);
+
+        // Fossil route retains substantial pheromone (> 40% of deposited strength)
+        assert!(
+            fossil_tau > 3.0,
+            "Fossil route should maintain high residual tau: {}",
+            fossil_tau
+        );
+
+        // Instant recall: a single new query reinforces the fossil highway
+        let updated = map.deposit_fractional(1, 2, 2.0, ninety_days_ms, 0.15);
+        assert!(
+            updated > 5.0,
+            "Reinforced fossil highway should jump immediately: {}",
+            updated
         );
     }
 }

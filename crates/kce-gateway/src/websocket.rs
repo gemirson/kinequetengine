@@ -31,7 +31,9 @@ async fn handle_connection(stream: TcpStream) {
         match msg {
             Ok(Message::Text(text)) => {
                 // Echo for MVP
-                let _ = ws_sender.send(Message::Text(format!("Echo: {}", text))).await;
+                let _ = ws_sender
+                    .send(Message::Text(format!("Echo: {}", text)))
+                    .await;
             }
             Ok(Message::Close(_)) => break,
             Err(e) => {

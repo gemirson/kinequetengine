@@ -129,8 +129,9 @@ impl GossipNode {
     }
 
     /// Main loop for listening to gossip messages.
-    pub async fn listen<F>(&self, handler: F) -> std::io::Result<()> 
-    where F: Fn(SwarmPacket) + Send + Sync + 'static
+    pub async fn listen<F>(&self, handler: F) -> std::io::Result<()>
+    where
+        F: Fn(SwarmPacket) + Send + Sync + 'static,
     {
         let mut buf = [0u8; 4096];
         loop {

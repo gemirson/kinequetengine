@@ -233,8 +233,8 @@ impl AntigenMemory {
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<usize, String> {
         let records: Vec<&AntigenRecord> = self.records.values().collect();
         let count = records.len();
-        let json = serde_json::to_string_pretty(&records)
-            .map_err(|e| format!("serialize error: {e}"))?;
+        let json =
+            serde_json::to_string_pretty(&records).map_err(|e| format!("serialize error: {e}"))?;
         fs::write(path, json).map_err(|e| format!("write error: {e}"))?;
         Ok(count)
     }
@@ -272,9 +272,8 @@ impl AntigenMemory {
 
     /// Export all antigen records as CSV.
     pub fn export_csv(&self) -> String {
-        let mut csv = String::from(
-            "antigen_id,severity,first_seen_ms,last_seen_ms,encounter_count,status\n",
-        );
+        let mut csv =
+            String::from("antigen_id,severity,first_seen_ms,last_seen_ms,encounter_count,status\n");
         for record in self.records.values() {
             let status = match record.status {
                 AntigenStatus::Active => "ACTIVE",
@@ -364,11 +363,7 @@ mod tests {
         let id = mem.store(vec![1.0, 2.0], Severity::High, 0);
 
         // At 1 ms, antigen is still active
-        assert!(!AntigenMemory::is_expired(
-            mem.get(id).unwrap(),
-            1,
-            90
-        ));
+        assert!(!AntigenMemory::is_expired(mem.get(id).unwrap(), 1, 90));
 
         // At exactly the boundary it is still active (>, not >=)
         let boundary_ms = 90_u64 * 86_400 * 1000;
@@ -442,7 +437,10 @@ mod tests {
         assert_eq!(data_lines.len(), 2);
         // Each data line should end with ACTIVE
         for line in &data_lines {
-            assert!(line.ends_with(",ACTIVE"), "expected ACTIVE status in: {line}");
+            assert!(
+                line.ends_with(",ACTIVE"),
+                "expected ACTIVE status in: {line}"
+            );
         }
     }
 
