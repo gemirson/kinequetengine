@@ -1,0 +1,36 @@
+syntax = "proto3";
+package kce.gateway;
+
+service KceGateway {
+  // Executa busca vetorial distribuída
+  rpc Search (SearchRequest) returns (SearchResponse);
+  
+  // Stream de telemetria em tempo real para o dashboard
+  rpc StreamTelemetry (TelemetryRequest) returns (stream TelemetryEvent);
+}
+
+message SearchRequest {
+  uint64 tenant_id = 1;
+  repeated double query_vector = 2;
+  uint32 top_k = 3;
+}
+
+message SearchResponse {
+  repeated SearchResult results = 1;
+  double latency_ms = 2;
+}
+
+message SearchResult {
+  uint64 id = 1;
+  double score = 2;
+}
+
+message TelemetryRequest {
+  uint64 tenant_id = 1;
+}
+
+message TelemetryEvent {
+  string timestamp = 1;
+  string component = 2; // e.g. "ACO", "AIS", "Core"
+  string event_json = 3; // Estado estruturado serializado
+}

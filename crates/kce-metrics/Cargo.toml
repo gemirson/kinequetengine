@@ -1,0 +1,12 @@
+[package]
+name = "kce-metrics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Distance and similarity metrics for KCE (cosine, prime, Wasserstein, Sinkhorn)"
+
+[dependencies]
+kce-core = { workspace = true }
+
+[lints]
+workspace = true

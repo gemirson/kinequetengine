@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  kce-server:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - KCE_PORT=8080
+      - KCE_LOG_LEVEL=info
+      - KCE_TIMEOUT_MS=100
+      - KCE_TENANT_RATE_LIMIT=50
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

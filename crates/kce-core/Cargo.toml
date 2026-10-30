@@ -1,0 +1,15 @@
+[package]
+name = "kce-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Shared types, traits, and errors for the KineContext Engine"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+parking_lot = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
