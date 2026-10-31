@@ -85,7 +85,14 @@ mod tests {
 
     #[test]
     fn mmap_reader_open_and_read() {
-        let dir = std::env::temp_dir().join(format!("kce_mmap_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "kce_mmap_open_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&dir).expect("mkdir");
         let path = dir.join("test_data.bin");
         std::fs::write(&path, b"hello world").expect("write");
@@ -103,7 +110,14 @@ mod tests {
 
     #[test]
     fn mmap_reader_empty_file() {
-        let dir = std::env::temp_dir().join(format!("kce_mmap_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "kce_mmap_empty_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&dir).expect("mkdir");
         let path = dir.join("empty.bin");
         std::fs::write(&path, b"").expect("write");
@@ -118,7 +132,14 @@ mod tests {
 
     #[test]
     fn mmap_reader_offset_bounds() {
-        let dir = std::env::temp_dir().join(format!("kce_mmap_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "kce_mmap_bounds_{}_{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&dir).expect("mkdir");
         let path = dir.join("bounds.bin");
         std::fs::write(&path, b"abcdef").expect("write");
