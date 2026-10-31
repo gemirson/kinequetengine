@@ -9,6 +9,7 @@ pub use grpc::KceGatewayService;
 pub use websocket::start_websocket_server;
 
 /// Generated gRPC code.
+#[allow(clippy::unwrap_used)]
 pub mod proto {
     tonic::include_proto!("kce.gateway");
 }

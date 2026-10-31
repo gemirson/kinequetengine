@@ -13,6 +13,7 @@
 #![deny(unsafe_code)]
 #![deny(clippy::unwrap_used)]
 
+pub mod caputo;
 pub mod error;
 pub mod traits;
 pub mod types;

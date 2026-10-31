@@ -113,14 +113,16 @@ impl GossipNode {
         };
         let data = packet.serialize();
 
-        let peers = self.peers.read();
-        // Epidemic limited broadcast: pick K=3 random neighbors
-        let k = 3;
-        let targets = if peers.len() <= k {
-            peers.clone()
-        } else {
-            // Simplified random selection for MVP
-            peers.iter().take(k).copied().collect()
+        let targets = {
+            let peers = self.peers.read();
+            // Epidemic limited broadcast: pick K=3 random neighbors
+            let k = 3;
+            if peers.len() <= k {
+                peers.clone()
+            } else {
+                // Simplified random selection for MVP
+                peers.iter().take(k).copied().collect()
+            }
         };
 
         for target in targets {
@@ -129,8 +131,9 @@ impl GossipNode {
     }
 
     /// Main loop for listening to gossip messages.
-    pub async fn listen<F>(&self, handler: F) -> std::io::Result<()> 
-    where F: Fn(SwarmPacket) + Send + Sync + 'static
+    pub async fn listen<F>(&self, handler: F) -> std::io::Result<()>
+    where
+        F: Fn(SwarmPacket) + Send + Sync + 'static,
     {
         let mut buf = [0u8; 4096];
         loop {

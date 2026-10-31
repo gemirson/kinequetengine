@@ -111,12 +111,7 @@ impl AdaptiveMutator {
     /// fitness function. If any mutation scores higher than the original,
     /// the best mutation is returned; otherwise the original is preserved
     /// (elitism).
-    pub fn explore_mutations<F>(
-        &mut self,
-        original: &[f64],
-        n: usize,
-        fitness: F,
-    ) -> ExploreResult
+    pub fn explore_mutations<F>(&mut self, original: &[f64], n: usize, fitness: F) -> ExploreResult
     where
         F: Fn(&[f64]) -> f64,
     {
@@ -274,7 +269,10 @@ mod tests {
         let result = mutator.explore_mutations(original, 50, fitness);
 
         // Since the original is the global optimum, no mutation should improve it
-        assert!(!result.is_mutation, "Expected no mutation to beat the optimum");
+        assert!(
+            !result.is_mutation,
+            "Expected no mutation to beat the optimum"
+        );
         assert_eq!(result.improvements, 0);
         assert_eq!(result.selected, original);
         assert!((result.selected_score - result.original_score).abs() < 1e-15);
@@ -296,9 +294,15 @@ mod tests {
         // With such a large negative starting point and positive noise,
         // many mutations should improve
         if result.improvements > 0 {
-            assert!(result.is_mutation, "is_mutation should be true when improvements > 0");
+            assert!(
+                result.is_mutation,
+                "is_mutation should be true when improvements > 0"
+            );
         } else {
-            assert!(!result.is_mutation, "is_mutation should be false when no improvements");
+            assert!(
+                !result.is_mutation,
+                "is_mutation should be false when no improvements"
+            );
         }
     }
 

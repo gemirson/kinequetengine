@@ -10,6 +10,7 @@
 //! 4. Anomaly frequency
 //! 5. Resource utilization
 
+use kce_core::caputo::CaputoState;
 use serde::{Deserialize, Serialize};
 
 /// System health metrics snapshot.
@@ -59,6 +60,10 @@ pub struct SystemState {
     pub nonself_threshold: f64,
     /// Antigen expiry in days.
     pub expiry_days: u32,
+    /// FT-037 Caputo: fractional order for suspect context during attack (accelerated purge).
+    pub caputo_suspect_alpha: f32,
+    /// FT-037 Caputo: fractional order for confirmed antigens (lifelong memory immunity).
+    pub caputo_antigen_alpha: f32,
 }
 
 impl Default for SystemState {
@@ -71,6 +76,8 @@ impl Default for SystemState {
             ant_count: 5,
             nonself_threshold: 0.6,
             expiry_days: 90,
+            caputo_suspect_alpha: 0.99,
+            caputo_antigen_alpha: 0.05,
         }
     }
 }
@@ -85,6 +92,8 @@ pub struct Guardrails {
     pub ant_count: (usize, usize),
     pub nonself_threshold: (f64, f64),
     pub expiry_days: (u32, u32),
+    pub caputo_suspect_alpha: (f32, f32),
+    pub caputo_antigen_alpha: (f32, f32),
 }
 
 impl Default for Guardrails {
@@ -97,6 +106,8 @@ impl Default for Guardrails {
             ant_count: (2, 20),
             nonself_threshold: (0.3, 0.9),
             expiry_days: (1, 365),
+            caputo_suspect_alpha: (0.80, 0.99),
+            caputo_antigen_alpha: (0.01, 0.20),
         }
     }
 }
@@ -179,11 +190,7 @@ impl NetworkRegulator {
     }
 
     /// Create with custom state and guardrails.
-    pub fn with_state(
-        config: RegulatorConfig,
-        state: SystemState,
-        guardrails: Guardrails,
-    ) -> Self {
+    pub fn with_state(config: RegulatorConfig, state: SystemState, guardrails: Guardrails) -> Self {
         Self {
             config,
             history: Vec::new(),
@@ -309,11 +316,8 @@ impl NetworkRegulator {
 
         // Reduce ant count
         let old_count = self.state.ant_count;
-        let new_count =
-            ((old_count as f64 * (1.0 - step)).round() as usize).clamp(
-                self.guardrails.ant_count.0,
-                self.guardrails.ant_count.1,
-            );
+        let new_count = ((old_count as f64 * (1.0 - step)).round() as usize)
+            .clamp(self.guardrails.ant_count.0, self.guardrails.ant_count.1);
         if new_count != old_count {
             adjustments.push(Adjustment {
                 parameter: "ant_count".into(),
@@ -404,7 +408,46 @@ impl NetworkRegulator {
             self.state.nonself_threshold = new;
         }
 
+        // FT-037: Under attack, tune suspect alpha higher towards 0.99 for accelerated purge
+        let old_suspect = self.state.caputo_suspect_alpha;
+        let new_suspect = (old_suspect + step as f32 * 0.02).clamp(
+            self.guardrails.caputo_suspect_alpha.0,
+            self.guardrails.caputo_suspect_alpha.1,
+        );
+        if (new_suspect - old_suspect).abs() > 1e-4 {
+            adjustments.push(Adjustment {
+                parameter: "caputo_suspect_alpha".into(),
+                from_value: format!("{:.4}", old_suspect),
+                to_value: format!("{:.4}", new_suspect),
+                reason: "High anomaly rate: raising suspect alpha for accelerated purge".into(),
+            });
+            self.state.caputo_suspect_alpha = new_suspect;
+        }
+
         adjustments
+    }
+
+    /// FT-037: Modulates a suspicious context under attack / non-self anomaly.
+    ///
+    /// Increases alpha to `caputo_suspect_alpha` (default: 0.99), inducing rapid
+    /// power-law memory decay and accelerated purging from the cognitive active set.
+    pub fn modulate_suspect_context(&self, state: &mut CaputoState, now_ms: u64) {
+        state.modulate_alpha(self.state.caputo_suspect_alpha, now_ms);
+    }
+
+    /// FT-037: Modulates a confirmed antigen into long-term vital immune memory.
+    ///
+    /// Decreases alpha to `caputo_antigen_alpha` (default: 0.05) and reinforces with
+    /// the threat severity stimulus, creating a heavy power-law tail (t^-alpha) for
+    /// decades of latent immunity without forgetting.
+    pub fn modulate_confirmed_antigen(
+        &self,
+        state: &mut CaputoState,
+        now_ms: u64,
+        severity_stimulus: f32,
+    ) -> f32 {
+        state.modulate_alpha(self.state.caputo_antigen_alpha, now_ms);
+        state.step_and_reinforce(now_ms, severity_stimulus)
     }
 }
 
@@ -552,11 +595,7 @@ mod tests {
             ..SystemState::default()
         };
         let guardrails = Guardrails::default();
-        let mut reg = NetworkRegulator::with_state(
-            RegulatorConfig::default(),
-            state,
-            guardrails,
-        );
+        let mut reg = NetworkRegulator::with_state(RegulatorConfig::default(), state, guardrails);
         // TightenSecurity lowers threshold but guardrail min is 0.3
         for _ in 0..100 {
             reg.regulate_and_apply(SystemMetrics {
@@ -578,11 +617,7 @@ mod tests {
             ..SystemState::default()
         };
         let guardrails = Guardrails::default();
-        let mut reg = NetworkRegulator::with_state(
-            RegulatorConfig::default(),
-            state,
-            guardrails,
-        );
+        let mut reg = NetworkRegulator::with_state(RegulatorConfig::default(), state, guardrails);
         // ReduceLoad increases threshold but guardrail max is 0.95
         for _ in 0..100 {
             reg.regulate_and_apply(SystemMetrics {
@@ -613,15 +648,9 @@ mod tests {
         // After 10 healthy cycles, no adjustments should be made
         // (the system converges to balanced state)
         let last_5_adjustments: usize = (0..5)
-            .map(|_| {
-                reg.regulate_and_apply(healthy_metrics())
-                    .len()
-            })
+            .map(|_| reg.regulate_and_apply(healthy_metrics()).len())
             .sum();
-        assert_eq!(
-            last_5_adjustments, 0,
-            "system should converge to balanced"
-        );
+        assert_eq!(last_5_adjustments, 0, "system should converge to balanced");
     }
 
     #[test]
@@ -630,11 +659,8 @@ mod tests {
             ant_count: 10,
             ..SystemState::default()
         };
-        let mut reg = NetworkRegulator::with_state(
-            RegulatorConfig::default(),
-            state,
-            Guardrails::default(),
-        );
+        let mut reg =
+            NetworkRegulator::with_state(RegulatorConfig::default(), state, Guardrails::default());
         let initial = reg.get_state().ant_count;
         let adjustments = reg.regulate_and_apply(SystemMetrics {
             latency_p95_ms: 200.0,
@@ -659,5 +685,56 @@ mod tests {
         let g = reg.get_guardrails();
         assert_eq!(g.detection_threshold, (0.3, 0.95));
         assert_eq!(g.mutation_rate, (0.01, 0.3));
+    }
+
+    #[test]
+    fn test_caputo_homeostasis_under_attack() {
+        let reg = NetworkRegulator::default();
+
+        // 1. Suspect context modulation (alpha -> 0.99)
+        let mut suspect = CaputoState::new(0.50, 100.0, 10_000);
+        reg.modulate_suspect_context(&mut suspect, 10_000);
+        assert_eq!(suspect.alpha, 0.99);
+
+        // 24 hours later, volatile suspect memory decays to near zero
+        let one_day_ms = 10_000 + 24 * 3600 * 1000;
+        let decayed = suspect.peek_intensity(one_day_ms);
+        assert!(
+            decayed < 1.0,
+            "Suspect context should purge rapidly: {}",
+            decayed
+        );
+
+        // 2. Confirmed antigen modulation (alpha -> 0.05)
+        let mut antigen = CaputoState::new(0.50, 20.0, 10_000);
+        let updated_intensity = reg.modulate_confirmed_antigen(&mut antigen, 10_000, 50.0);
+        assert_eq!(antigen.alpha, 0.05);
+        assert!(updated_intensity > 50.0);
+
+        // 1 year later (365 days), confirmed antigen retains strong fossil memory (> 50% of 50.0)
+        let one_year_ms = 10_000 + 365 * 24 * 3600 * 1000;
+        let retained = antigen.peek_intensity(one_year_ms);
+        assert!(
+            retained > 25.0,
+            "Confirmed antigen should retain long-term memory: {}",
+            retained
+        );
+    }
+
+    #[test]
+    fn test_caputo_tighten_security_adjusts_suspect_alpha() {
+        let mut reg = NetworkRegulator::default();
+        reg.state.caputo_suspect_alpha = 0.90;
+
+        let high_anomaly = SystemMetrics {
+            anomaly_rate: 50.0, // High anomaly rate triggers TightenSecurity
+            ..healthy_metrics()
+        };
+
+        let adjustments = reg.regulate_and_apply(high_anomaly);
+        assert!(adjustments
+            .iter()
+            .any(|a| a.parameter == "caputo_suspect_alpha"));
+        assert!(reg.get_state().caputo_suspect_alpha > 0.90);
     }
 }

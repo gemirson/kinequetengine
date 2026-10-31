@@ -5,19 +5,20 @@
 use axum::middleware as axum_middleware;
 use kce_api::middleware::{auth_middleware, request_id_middleware};
 use kce_api::routes::{build_router, AppState, TenantRateLimiter};
+use kce_core::traits::StorageBackend;
+use kce_gateway::{start_websocket_server, KceGatewayService};
 use kce_mce::engine::MceEngine;
 use kce_pipeline::orchestrator::{PipelineConfig, PipelineOrchestrator};
 use kce_retrieval::engine::Dataset;
 use kce_storage::backend::KineSQL;
-use kce_core::traits::StorageBackend;
-use kce_swarm::{GossipNode, RaftLite, ShardRouter};
-use kce_gateway::{KceGatewayService, start_websocket_server};
+use kce_swarm::{GossipNode, RaftLite};
+use parking_lot::RwLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 /// KCE runtime configuration populated from environment variables.
 #[derive(Debug)]
+#[allow(dead_code)]
 struct KceConfig {
     port: String,
     host: String,
@@ -53,15 +54,24 @@ impl KceConfig {
 }
 
 fn env_or(key: &str, default: usize) -> usize {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }
 
 fn env_or_u64(key: &str, default: u64) -> u64 {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }
 
 fn env_or_u16(key: &str, default: u16) -> u16 {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    std::env::var(key)
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(default)
 }
 
 #[tokio::main]
@@ -83,30 +93,43 @@ async fn main() {
     let mut pipeline_raw = PipelineOrchestrator::new(PipelineConfig::default(), dataset);
     pipeline_raw.storage = Some(Arc::clone(&shared_storage) as Arc<RwLock<dyn StorageBackend>>);
     let pipeline = Arc::new(pipeline_raw);
-    
-    let raft = Arc::new(RaftLite::new(local_node_id));
+
+    let _raft = Arc::new(RaftLite::new(local_node_id));
 
     // 3. Initialize Swarm Gossip (FT-029)
-    let swarm_addr = format!("{}:{}", config.host, config.swarm_port).parse().unwrap();
-    let gossip = Arc::new(GossipNode::new(local_node_id, swarm_addr).await.expect("failed to start gossip"));
-    
-    let pipeline_gossip = Arc::clone(&pipeline);
+    let swarm_addr = format!("{}:{}", config.host, config.swarm_port)
+        .parse()
+        .unwrap();
+    let gossip = Arc::new(
+        GossipNode::new(local_node_id, swarm_addr)
+            .await
+            .expect("failed to start gossip"),
+    );
+
+    let _pipeline_gossip = Arc::clone(&pipeline);
     tokio::spawn(async move {
-        gossip.listen(move |packet| {
-            tracing::debug!(?packet, "Received swarm message");
-            // Integration Logic (FT-029 AC-012)
-            if packet.message_type == kce_swarm::MessageType::PheromoneSync {
-                // Update local pheromones from swarm
-            }
-        }).await.ok();
+        gossip
+            .listen(move |packet| {
+                tracing::debug!(?packet, "Received swarm message");
+                // Integration Logic (FT-029 AC-012)
+                if packet.message_type == kce_swarm::MessageType::PheromoneSync {
+                    // Update local pheromones from swarm
+                }
+            })
+            .await
+            .ok();
     });
 
     // 4. Initialize Hematoencephalic Gateway (FT-031)
-    let grpc_addr = format!("{}:{}", config.host, config.gateway_port).parse().unwrap();
+    let grpc_addr = format!("{}:{}", config.host, config.gateway_port)
+        .parse()
+        .unwrap();
     let grpc_service = KceGatewayService;
     tokio::spawn(async move {
         tonic::transport::Server::builder()
-            .add_service(kce_gateway::proto::kce_gateway_server::KceGatewayServer::new(grpc_service))
+            .add_service(
+                kce_gateway::proto::kce_gateway_server::KceGatewayServer::new(grpc_service),
+            )
             .serve(grpc_addr)
             .await
             .ok();
@@ -136,7 +159,7 @@ async fn main() {
 
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    
+
     tracing::info!("KCE API Gateway starting on {}", addr);
     axum::serve(listener, app).await.unwrap();
 }

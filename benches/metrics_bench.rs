@@ -7,8 +7,6 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kce_core::traits::DistanceMetric;
 use kce_metrics::cosine::CosineMetric;
 use kce_metrics::latency::LatencyHistogram;
-use kce_metrics::sinkhorn::{SinkhornConfig, SinkhornMetric};
-use kce_metrics::wasserstein::WassersteinMetric;
 
 // ── LatencyHistogram::record_us ──────────────────────────────────────────────
 
@@ -30,43 +28,6 @@ fn bench_histogram_record(c: &mut Criterion) {
         b.iter(|| {
             let snap = h.percentiles();
             black_box(&snap);
-        });
-    });
-
-    group.finish();
-}
-
-// ── Sinkhorn distance ────────────────────────────────────────────────────────
-
-fn bench_sinkhorn(c: &mut Criterion) {
-    let mut group = c.benchmark_group("sinkhorn");
-
-    let m = SinkhornMetric::with_defaults();
-
-    group.bench_function("n=2", |b| {
-        let a = vec![0.3, 0.7];
-        let b_vec = vec![0.7, 0.3];
-        b.iter(|| {
-            let result = m.compute(black_box(&a), black_box(&b_vec));
-            black_box(&result);
-        });
-    });
-
-    group.bench_function("n=8", |b| {
-        let a: Vec<f64> = (1..=8).map(|i| i as f64 / 36.0).collect();
-        let b_vec: Vec<f64> = (1..=8).rev().map(|i| i as f64 / 36.0).collect();
-        b.iter(|| {
-            let result = m.compute(black_box(&a), black_box(&b_vec));
-            black_box(&result);
-        });
-    });
-
-    group.bench_function("n=16", |b| {
-        let a: Vec<f64> = (1..=16).map(|i| i as f64 / 136.0).collect();
-        let b_vec: Vec<f64> = (1..=16).rev().map(|i| i as f64 / 136.0).collect();
-        b.iter(|| {
-            let result = m.compute(black_box(&a), black_box(&b_vec));
-            black_box(&result);
         });
     });
 
@@ -109,40 +70,7 @@ fn bench_cosine(c: &mut Criterion) {
     group.finish();
 }
 
-// ── Wasserstein distance ─────────────────────────────────────────────────────
-
-fn bench_wasserstein(c: &mut Criterion) {
-    let mut group = c.benchmark_group("wasserstein");
-    let m = WassersteinMetric::new();
-
-    group.bench_function("n=2", |b| {
-        let a = vec![0.3, 0.7];
-        let b_vec = vec![0.7, 0.3];
-        b.iter(|| {
-            let result = m.compute(black_box(&a), black_box(&b_vec));
-            black_box(&result);
-        });
-    });
-
-    group.bench_function("n=8", |b| {
-        let a: Vec<f64> = (1..=8).map(|i| i as f64 / 36.0).collect();
-        let b_vec: Vec<f64> = (1..=8).rev().map(|i| i as f64 / 36.0).collect();
-        b.iter(|| {
-            let result = m.compute(black_box(&a), black_box(&b_vec));
-            black_box(&result);
-        });
-    });
-
-    group.finish();
-}
-
 // ── Criterion groups ─────────────────────────────────────────────────────────
 
-criterion_group!(
-    metrics_benches,
-    bench_histogram_record,
-    bench_sinkhorn,
-    bench_cosine,
-    bench_wasserstein,
-);
+criterion_group!(metrics_benches, bench_histogram_record, bench_cosine,);
 criterion_main!(metrics_benches);

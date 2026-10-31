@@ -217,7 +217,10 @@ mod tests {
 
     #[test]
     fn search_top_k_greater_than_dataset() {
-        let engine = RetrievalEngine::with_defaults();
+        let engine = RetrievalEngine::new(RetrievalConfig {
+            threshold: -1.0, // Retain all dataset vectors including orthogonal
+            ..Default::default()
+        });
         let ds = sample_dataset();
         let results = engine.search(&[1.0, 0.0], &ds, 100).expect("search");
         assert_eq!(results.len(), 3);

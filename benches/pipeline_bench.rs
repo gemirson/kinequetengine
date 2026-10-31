@@ -2,12 +2,13 @@
 //!
 //! Run with: `cargo bench --bench pipeline_bench`
 
+#![allow(clippy::expect_used)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use kce_aco::ant::{AntConfig, CandidateEdge};
+use kce_aco::ant::CandidateEdge;
 use kce_aco::colony::{Colony, ColonyConfig};
 use kce_aco::pheromone::{PheromoneConfig, PheromoneMap};
-use kce_core::traits::DistanceMetric;
 use kce_core::types::ContextInput;
 use kce_pipeline::orchestrator::{PipelineConfig, PipelineOrchestrator};
 use kce_retrieval::engine::{Dataset, RetrievalEngine};
@@ -67,7 +68,8 @@ fn bench_retrieval_search(c: &mut Criterion) {
     for &top_k in &[1, 5, 10, 50] {
         group.bench_function(format!("top_k={top_k}"), |b| {
             b.iter(|| {
-                let results = engine.search(black_box(&query), black_box(&dataset), black_box(top_k));
+                let results =
+                    engine.search(black_box(&query), black_box(&dataset), black_box(top_k));
                 black_box(&results);
             });
         });

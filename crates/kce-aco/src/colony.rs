@@ -69,6 +69,7 @@ pub struct Colony {
 
 impl Colony {
     /// Create a new colony with the given configuration.
+    #[allow(clippy::expect_used)]
     pub fn new(config: ColonyConfig) -> Self {
         let evaporation = EvaporationEngine::new(EvaporationConfig {
             rho: config.evaporation_rate,
@@ -110,13 +111,11 @@ impl Colony {
             );
 
             // Find best ant this iteration
-            let iter_best = ant_results
-                .iter()
-                .min_by(|a, b| {
-                    a.cost
-                        .partial_cmp(&b.cost)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
+            let iter_best = ant_results.iter().min_by(|a, b| {
+                a.cost
+                    .partial_cmp(&b.cost)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
 
             if let Some(best_ant) = iter_best {
                 let iter_cost = best_ant.cost;

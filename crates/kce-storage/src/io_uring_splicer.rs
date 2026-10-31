@@ -2,10 +2,10 @@
 //!
 //! Kernel-level data routing between files and sockets with zero-copy bypass.
 
-use std::os::unix::io::RawFd;
-use std::sync::Arc;
 use io_uring::{opcode, squeue, types, IoUring};
 use parking_lot::Mutex;
+use std::os::unix::io::RawFd;
+use std::sync::Arc;
 
 use kce_core::error::StorageError;
 
@@ -58,24 +58,20 @@ impl IoUringSplicer {
         .user_data(user_data);
 
         // 2. Splice from Kernel Pipe to Destination Socket (Output)
-        let op2 = opcode::Splice::new(
-            types::Fd(p_read),
-            -1,
-            types::Fd(fd_out),
-            -1,
-            len
-        )
-        .build()
-        .user_data(user_data + 1);
+        let op2 = opcode::Splice::new(types::Fd(p_read), -1, types::Fd(fd_out), -1, len)
+            .build()
+            .user_data(user_data + 1);
 
         let mut ring = self.ring.lock();
         unsafe {
             let mut sq = ring.submission();
-            sq.push(&op1).map_err(|_| StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full")))?;
-            sq.push(&op2).map_err(|_| StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full")))?;
+            sq.push(&op1)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
+            sq.push(&op2)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
 
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 }

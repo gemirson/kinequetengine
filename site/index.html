@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KineQuetEngine — The Brain for AI Agents</title>
+  <meta name="description" content="KCE is a bio-inspired cognitive engine that organizes, protects, evolves, and executes context autonomously. Built in Rust for sub-millisecond AI infrastructure.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- NAV -->
+  <nav id="main-nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <span class="logo-icon">🧬</span>
+        <span class="logo-text">KineQuetEngine</span>
+      </a>
+      <div class="nav-links">
+        <a href="#innovation">Innovation</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#features">Features</a>
+        <a href="#metrics">Performance</a>
+        <a href="https://github.com/kinecontext/kce" class="nav-cta" target="_blank">GitHub →</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-bg-grid"></div>
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Bio-Inspired Cognitive Engine · Built in Rust
+      </div>
+      <h1>Your AI agents deserve<br><span class="gradient-text">a living brain.</span></h1>
+      <p class="hero-sub">
+        KCE is not a vector database. It's an <strong>Active Cognitive Data Engine</strong> that
+        organizes, protects, evolves, and executes context autonomously —
+        powered by algorithms extracted from biology.
+      </p>
+      <div class="hero-actions">
+        <a href="#innovation" class="btn btn-primary">
+          <span>Explore the Innovation</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="https://github.com/kinecontext/kce" class="btn btn-ghost" target="_blank">
+          View on GitHub
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value" data-count="36">0</span>
+          <span class="stat-label">Features Specified</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value" data-count="16">0</span>
+          <span class="stat-label">Rust Crates</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value" data-count="258">0</span>
+          <span class="stat-label">Tests Passing</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value special">&lt;5ms</span>
+          <span class="stat-label">P99 Latency</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-scroll-hint">
+      <span>Scroll to explore</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section id="problem">
+    <div class="section-inner">
+      <div class="problem-grid">
+        <div class="problem-text">
+          <span class="section-tag">The Problem</span>
+          <h2>Vector databases are <span class="gradient-text">passive warehouses.</span></h2>
+          <p>
+            Pinecone, Milvus, Qdrant, Weaviate — they all do the same thing:
+            <strong>store vectors and return results.</strong> They don't understand context.
+            They don't learn from usage. They can't protect themselves from adversarial inputs.
+            And they certainly don't execute decisions.
+          </p>
+          <p>
+            In a world of autonomous AI agents, your data infrastructure needs to be
+            as intelligent as the models it serves.
+          </p>
+        </div>
+        <div class="problem-comparison">
+          <div class="comp-card comp-old">
+            <div class="comp-header">
+              <span class="comp-icon">📦</span>
+              <span>Traditional Vector DB</span>
+            </div>
+            <ul>
+              <li><span class="x-mark">✕</span> Static store & retrieve</li>
+              <li><span class="x-mark">✕</span> No learning from usage</li>
+              <li><span class="x-mark">✕</span> Security at API perimeter only</li>
+              <li><span class="x-mark">✕</span> Returns raw JSON text</li>
+              <li><span class="x-mark">✕</span> Requires DBA tuning</li>
+              <li><span class="x-mark">✕</span> Accumulates stale data</li>
+            </ul>
+          </div>
+          <div class="comp-card comp-new">
+            <div class="comp-header">
+              <span class="comp-icon">🧬</span>
+              <span>KineQuetEngine</span>
+            </div>
+            <ul>
+              <li><span class="check-mark">✓</span> Active cognitive processing</li>
+              <li><span class="check-mark">✓</span> Pheromone highways (ACO)</li>
+              <li><span class="check-mark">✓</span> Intrinsic immune system (AIS)</li>
+              <li><span class="check-mark">✓</span> Executable binary payloads</li>
+              <li><span class="check-mark">✓</span> Zero-Ops homeostasis</li>
+              <li><span class="check-mark">✓</span> Autonomous data lifecycle</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INNOVATION PILLARS -->
+  <section id="innovation">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-tag">Core Innovation</span>
+        <h2>Four breakthroughs.<br><span class="gradient-text">Zero precedent.</span></h2>
+        <p class="section-desc">Each pillar represents a capability that <strong>no other product or academic paper</strong> has implemented in a vector search engine.</p>
+      </div>
+
+      <div class="pillars-grid">
+        <!-- ACO-HNSW -->
+        <div class="pillar-card" id="pillar-aco">
+          <div class="pillar-icon">🐜</div>
+          <div class="pillar-badge">First-Mover</div>
+          <h3>ACO-HNSW</h3>
+          <p class="pillar-subtitle">Pheromone-Guided Vector Search</p>
+          <p>HNSW graphs with dynamic pheromone trails. Frequent queries create <strong>cognitive highways</strong> — search cost decreases with use. The index literally learns your workload.</p>
+          <div class="pillar-detail">
+            <div class="detail-row">
+              <span class="detail-label">Classic HNSW</span>
+              <span class="detail-value dim">Static geometric connections</span>
+            </div>
+            <div class="detail-row highlight">
+              <span class="detail-label">KCE ACO-HNSW</span>
+              <span class="detail-value">Dynamic pheromone + geometric</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AIS -->
+        <div class="pillar-card" id="pillar-ais">
+          <div class="pillar-icon">🛡️</div>
+          <div class="pillar-badge">No Equivalent</div>
+          <h3>Artificial Immune System</h3>
+          <p class="pillar-subtitle">Intrinsic Data-Layer Security</p>
+          <p>Six integrated subsystems — detection, antigenic memory, amplification, self/non-self classification, adaptive mutation, and network regulation. <strong>Your data protects itself.</strong></p>
+          <div class="pillar-detail">
+            <div class="detail-row">
+              <span class="detail-label">Others</span>
+              <span class="detail-value dim">API key + RBAC perimeter</span>
+            </div>
+            <div class="detail-row highlight">
+              <span class="detail-label">KCE AIS</span>
+              <span class="detail-value">Anomaly detection &lt;2ms inline</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ECMA -->
+        <div class="pillar-card" id="pillar-ecma">
+          <div class="pillar-icon">🧬</div>
+          <div class="pillar-badge">New Concept</div>
+          <h3>ECMA Lifecycle</h3>
+          <p class="pillar-subtitle">Embryological Cognitive Memory</p>
+          <p>Knowledge nodes evolve through biological states: <strong>Stem → Progenitor → Specialized → Apoptosis</strong>. Irrelevant data dies naturally. No manual pruning ever.</p>
+          <div class="pillar-lifecycle">
+            <div class="lifecycle-stage">
+              <span class="stage-dot stem"></span>
+              <span>Stem</span>
+            </div>
+            <span class="lifecycle-arrow">→</span>
+            <div class="lifecycle-stage">
+              <span class="stage-dot progenitor"></span>
+              <span>Progenitor</span>
+            </div>
+            <span class="lifecycle-arrow">→</span>
+            <div class="lifecycle-stage">
+              <span class="stage-dot specialized"></span>
+              <span>Specialized</span>
+            </div>
+            <span class="lifecycle-arrow">→</span>
+            <div class="lifecycle-stage">
+              <span class="stage-dot apoptosis"></span>
+              <span>Apoptosis</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MCE -->
+        <div class="pillar-card" id="pillar-mce">
+          <div class="pillar-icon">💉</div>
+          <div class="pillar-badge">New Category</div>
+          <h3>mRNA Cognitive Execution</h3>
+          <p class="pillar-subtitle">Context → Executable Binary Payload</p>
+          <p>Competitors return raw JSON. KCE <strong>compiles context into executable mRNA</strong> — with intent, priority, TTL and &gt;50% compression. Vector search becomes decision-making.</p>
+          <div class="pillar-detail">
+            <div class="detail-row">
+              <span class="detail-label">RAG Pipeline</span>
+              <span class="detail-value dim">JSON → LLM prompt stuffing</span>
+            </div>
+            <div class="detail-row highlight">
+              <span class="detail-label">KCE MCE</span>
+              <span class="detail-value">Binary payload → action &lt;5ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-tag">Architecture</span>
+        <h2>Modular. Bio-inspired.<br><span class="gradient-text">Production-ready.</span></h2>
+        <p class="section-desc">16 Rust crates orchestrated through a 10-stage cognitive pipeline.</p>
+      </div>
+
+      <div class="arch-visual">
+        <div class="arch-layer arch-entry">
+          <div class="arch-layer-label">Entry Point</div>
+          <div class="arch-nodes">
+            <div class="arch-node node-server">kce-server</div>
+          </div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer arch-api">
+          <div class="arch-layer-label">API Layer</div>
+          <div class="arch-nodes">
+            <div class="arch-node node-api">kce-api <span class="node-tag">Axum REST</span></div>
+            <div class="arch-node node-gateway">kce-gateway <span class="node-tag">gRPC-Web</span></div>
+            <div class="arch-node node-mcp">kce-mcp <span class="node-tag">MCP Protocol</span></div>
+          </div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer arch-brain">
+          <div class="arch-layer-label">Cognitive Core</div>
+          <div class="arch-nodes">
+            <div class="arch-node node-pipeline">kce-pipeline <span class="node-tag">10-stage</span></div>
+            <div class="arch-node node-aco">kce-aco <span class="node-tag">🐜 Pheromone</span></div>
+            <div class="arch-node node-ais">kce-ais <span class="node-tag">🛡️ Immune</span></div>
+          </div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer arch-engine">
+          <div class="arch-layer-label">Engines</div>
+          <div class="arch-nodes">
+            <div class="arch-node node-retrieval">kce-retrieval <span class="node-tag">SIMD cosine</span></div>
+            <div class="arch-node node-graph">kce-graph <span class="node-tag">BFS/DFS</span></div>
+            <div class="arch-node node-ecma">kce-ecma <span class="node-tag">Lifecycle</span></div>
+            <div class="arch-node node-mce">kce-mce <span class="node-tag">mRNA</span></div>
+          </div>
+        </div>
+        <div class="arch-connector"></div>
+        <div class="arch-layer arch-infra">
+          <div class="arch-layer-label">Infrastructure</div>
+          <div class="arch-nodes">
+            <div class="arch-node node-storage">kce-storage <span class="node-tag">KineSQL + WAL</span></div>
+            <div class="arch-node node-metrics">kce-metrics <span class="node-tag">Wasserstein</span></div>
+            <div class="arch-node node-swarm">kce-swarm <span class="node-tag">Gossip UDP</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-tag">Features</span>
+        <h2>36 features. <span class="gradient-text">Zero shortcuts.</span></h2>
+        <p class="section-desc">Every feature has acceptance criteria, test plans, and a definition of done.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feat-category">
+          <h4>🧠 Core Engine</h4>
+          <div class="feat-item">Hybrid Vector Search (cosine SIMD)</div>
+          <div class="feat-item">Semantic Graph Expansion (BFS/DFS)</div>
+          <div class="feat-item">Entity Lifecycle (ECMA)</div>
+          <div class="feat-item">mRNA Cognitive Execution (MCE)</div>
+          <div class="feat-item">KineSQL Embedded Storage (WAL + mmap)</div>
+          <div class="feat-item">Gödel Encoding (loop detection)</div>
+        </div>
+        <div class="feat-category">
+          <h4>🐜 Ant Colony (ACO)</h4>
+          <div class="feat-item">Pheromone Routing (MMAS)</div>
+          <div class="feat-item">Temporal Evaporation</div>
+          <div class="feat-item">Parallel Ant Exploration</div>
+          <div class="feat-item">Colony Optimization (multi-cycle)</div>
+          <div class="feat-item">ACO-HNSW Hybrid Index</div>
+        </div>
+        <div class="feat-category">
+          <h4>🛡️ Immune System (AIS)</h4>
+          <div class="feat-item">Anomaly Detection (&lt;2ms)</div>
+          <div class="feat-item">Antigen Memory (persistent)</div>
+          <div class="feat-item">Response Amplification</div>
+          <div class="feat-item">Self / Non-Self Classification</div>
+          <div class="feat-item">Adaptive Mutation</div>
+          <div class="feat-item">Network Regulation (Homeostasis)</div>
+        </div>
+        <div class="feat-category">
+          <h4>🌐 Distributed</h4>
+          <div class="feat-item">Dynamic Sharding (ACTA)</div>
+          <div class="feat-item">Swarm Gossip Protocol (UDP)</div>
+          <div class="feat-item">Raft-Lite Consensus</div>
+          <div class="feat-item">Hematoencephalic Gateway</div>
+          <div class="feat-item">io_uring Zero-Copy I/O</div>
+          <div class="feat-item">Game Theory (MCTS allocation)</div>
+        </div>
+        <div class="feat-category">
+          <h4>📐 Advanced Metrics</h4>
+          <div class="feat-item">Wasserstein / Sinkhorn Distance</div>
+          <div class="feat-item">Ollivier-Ricci Curvature</div>
+          <div class="feat-item">Latency P99 Histograms</div>
+          <div class="feat-item">Differential Geometry Search</div>
+        </div>
+        <div class="feat-category">
+          <h4>⚡ Operations</h4>
+          <div class="feat-item">MCP Server (Agent-Native)</div>
+          <div class="feat-item">Python Bindings (PyO3)</div>
+          <div class="feat-item">Observability (Tracing + Prometheus)</div>
+          <div class="feat-item">Multi-Tenant Security</div>
+          <div class="feat-item">Resilience (Circuit Breaker)</div>
+          <div class="feat-item">Docker + 12-Factor Deploy</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS -->
+  <section id="metrics">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-tag">Performance</span>
+        <h2>Built in Rust. <span class="gradient-text">Benchmarked relentlessly.</span></h2>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">&lt;5<span class="metric-unit">ms</span></div>
+          <div class="metric-label">mRNA Execution</div>
+          <div class="metric-desc">Context compiled and executed</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">&lt;2<span class="metric-unit">ms</span></div>
+          <div class="metric-label">Anomaly Detection</div>
+          <div class="metric-desc">Inline immune scan overhead</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">&lt;0.5<span class="metric-unit">ms</span></div>
+          <div class="metric-label">Pheromone Deposit</div>
+          <div class="metric-desc">ACO learning per interaction</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">50<span class="metric-unit">%+</span></div>
+          <div class="metric-label">Payload Compression</div>
+          <div class="metric-desc">mRNA vs raw input reduction</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">5K<span class="metric-unit">/s</span></div>
+          <div class="metric-label">Deposit Throughput</div>
+          <div class="metric-desc">Sustained pheromone updates</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">&lt;5<span class="metric-unit">%</span></div>
+          <div class="metric-label">False Positive Rate</div>
+          <div class="metric-desc">AIS detection after warm-up</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODE EXAMPLE -->
+  <section id="code">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-tag">Quick Start</span>
+        <h2>Three commands. <span class="gradient-text">Infinite cognition.</span></h2>
+      </div>
+      <div class="code-blocks">
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">Terminal</span>
+          </div>
+          <pre><code><span class="code-comment"># Build & run</span>
+<span class="code-cmd">cargo</span> build --release
+<span class="code-cmd">./target/release/kce-server</span>
+
+<span class="code-comment"># Or use Docker</span>
+<span class="code-cmd">docker</span> compose up --build</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">Semantic Query</span>
+          </div>
+          <pre><code><span class="code-cmd">curl</span> -X POST http://localhost:3000/query \
+  -H <span class="code-str">"Content-Type: application/json"</span> \
+  -d <span class="code-str">'{
+    "text": "rust memory safety patterns",
+    "top_k": 5,
+    "filters": {}
+  }'</span></code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-dot red"></span>
+            <span class="code-dot yellow"></span>
+            <span class="code-dot green"></span>
+            <span class="code-title">Execute Intent (mRNA)</span>
+          </div>
+          <pre><code><span class="code-cmd">curl</span> -X POST http://localhost:3000/action \
+  -H <span class="code-str">"Content-Type: application/json"</span> \
+  -d <span class="code-str">'{
+    "context_id": "ctx-abc123",
+    "intent": "risk_eval",
+    "params": {}
+  }'</span>
+<span class="code-comment"># → {"action":"risk_eval","result":{"risk_score":0.72,</span>
+<span class="code-comment">#    "recommendation":"APPROVE_WITH_CONDITIONS"},</span>
+<span class="code-comment">#    "execution_ms":2.3}</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta">
+    <div class="cta-glow"></div>
+    <div class="section-inner">
+      <h2>Ready to give your AI agents<br><span class="gradient-text">a living brain?</span></h2>
+      <p>KCE is open-source under CC BY-NC 4.0. Explore the code, read the specs, run the benchmarks.</p>
+      <div class="cta-actions">
+        <a href="https://github.com/kinecontext/kce" class="btn btn-primary btn-lg" target="_blank">
+          <span>⭐ Star on GitHub</span>
+        </a>
+        <a href="https://github.com/kinecontext/kce/tree/main/.spec." class="btn btn-ghost btn-lg" target="_blank">
+          <span>📄 Read the Specs</span>
+        </a>
+      </div>
+      <p class="cta-license">Licensed under CC BY-NC 4.0 · Built with 🦀 Rust</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer id="footer">
+    <div class="section-inner">
+      <div class="footer-inner">
+        <span class="footer-logo">🧬 KineQuetEngine</span>
+        <span class="footer-copy">© 2026 KineContext · Bio-Inspired AI Infrastructure</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

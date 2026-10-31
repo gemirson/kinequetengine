@@ -204,16 +204,13 @@ pub fn explore(
 
         loop {
             // Check timeout
-            if config.timeout_ms > 0
-                && start_time.elapsed().as_millis() as u64 >= config.timeout_ms
+            if config.timeout_ms > 0 && start_time.elapsed().as_millis() as u64 >= config.timeout_ms
             {
                 break;
             }
 
             let candidates = neighbors_fn(ant.current_node());
-            if candidates.is_empty()
-                || !ant.step(&candidates, pheromone, &config, &mut rng)
-            {
+            if candidates.is_empty() || !ant.step(&candidates, pheromone, &config, &mut rng) {
                 break;
             }
         }
@@ -252,7 +249,9 @@ impl DeterministicRng {
         z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
         z ^= z >> 31;
         // Ensure non-zero state (xorshift degenerates on 0)
-        Self { state: if z == 0 { 1 } else { z } }
+        Self {
+            state: if z == 0 { 1 } else { z },
+        }
     }
 }
 
@@ -355,10 +354,8 @@ mod tests {
         let config = AntConfig::default();
         let results = explore(1, 5, &neighbors, &pheromone, &config, 42);
         // At least 2 ants should have different alpha values
-        let unique_alphas: std::collections::HashSet<u64> = results
-            .iter()
-            .map(|r| (r.alpha * 1000.0) as u64)
-            .collect();
+        let unique_alphas: std::collections::HashSet<u64> =
+            results.iter().map(|r| (r.alpha * 1000.0) as u64).collect();
         assert!(unique_alphas.len() >= 2);
     }
 }

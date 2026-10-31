@@ -174,11 +174,7 @@ impl ImmuneDetector {
             self.total_post_warmup += 1;
             if is_anomaly && self.window.len() >= 2 {
                 let mean = self.baseline_sum / self.window.len() as f64;
-                let variance: f64 = self
-                    .window
-                    .iter()
-                    .map(|d| (d - mean).powi(2))
-                    .sum::<f64>()
+                let variance: f64 = self.window.iter().map(|d| (d - mean).powi(2)).sum::<f64>()
                     / self.window.len() as f64;
                 let stddev = variance.sqrt();
                 if min_dist <= mean + stddev {

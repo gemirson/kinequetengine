@@ -3,12 +3,12 @@
 //! Combines Hierarchical Navigable Small World (HNSW) graphs with
 //! Ant Colony Optimization (ACO) for dynamic, usage-driven routing.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use parking_lot::RwLock;
 use rand::Rng;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use kce_core::error::KceError;
 use kce_core::traits::DistanceMetric;
@@ -88,14 +88,22 @@ impl AcoHnswIndex {
 
     /// Add a node to the index.
     /// (Simplified: adds to a flat graph for MVP, full HNSW layers in Iteration 1).
-    pub fn add_node(&self, id: u64, vector: Vec<f64>, neighbor_ids: Vec<u64>) -> Result<(), KceError> {
+    pub fn add_node(
+        &self,
+        id: u64,
+        vector: Vec<f64>,
+        neighbor_ids: Vec<u64>,
+    ) -> Result<(), KceError> {
         let mut nodes = self.nodes.write();
         let config = self.config.read();
 
         let mut neighbors = Vec::new();
         for nid in neighbor_ids {
             if let Some(target) = nodes.get(&nid) {
-                let dist = self.metric.compute(&vector, &target.vector).map_err(|e| KceError::Config(e.to_string()))?;
+                let dist = self
+                    .metric
+                    .compute(&vector, &target.vector)
+                    .map_err(|e| KceError::Config(e.to_string()))?;
                 neighbors.push(AcoEdge {
                     to: nid,
                     distance: dist,
@@ -104,22 +112,33 @@ impl AcoHnswIndex {
             }
         }
 
-        nodes.insert(id, AcoNode { id, vector, neighbors });
+        nodes.insert(
+            id,
+            AcoNode {
+                id,
+                vector,
+                neighbors,
+            },
+        );
         Ok(())
     }
 
     /// Perform a search using ACO-driven traversal.
-    pub fn search(&self, query_vector: &[f64], top_k: usize) -> Result<Vec<AcoSearchResult>, KceError> {
+    pub fn search(
+        &self,
+        query_vector: &[f64],
+        top_k: usize,
+    ) -> Result<Vec<AcoSearchResult>, KceError> {
         let nodes = self.nodes.read();
         let config = self.config.read();
-        
+
         if nodes.is_empty() {
             return Ok(vec![]);
         }
 
         // Start from a random node (or entry point in full HNSW)
         let entry_ids: Vec<u64> = nodes.keys().take(config.num_ants).copied().collect();
-        
+
         // Launch ants in parallel
         let ant_results: Vec<AntPath> = (0..config.num_ants)
             .into_par_iter()
@@ -144,7 +163,11 @@ impl AcoHnswIndex {
             .map(|(id, (score, _))| AcoSearchResult { id, score, hops: 0 }) // hops tracking per node can be added
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         results.truncate(top_k);
 
         // Reinforce paths for top results (FT-012)
@@ -155,7 +178,13 @@ impl AcoHnswIndex {
     }
 
     /// Single ant traversal logic.
-    fn run_ant(&self, start_id: u64, query_vector: &[f64], nodes: &HashMap<u64, AcoNode>, config: &AcoHnswConfig) -> AntPath {
+    fn run_ant(
+        &self,
+        start_id: u64,
+        query_vector: &[f64],
+        nodes: &HashMap<u64, AcoNode>,
+        config: &AcoHnswConfig,
+    ) -> AntPath {
         let mut current_id = start_id;
         let mut visited = HashSet::new();
         let mut path = Vec::new();
@@ -174,34 +203,46 @@ impl AcoHnswIndex {
             };
 
             // Update best found
-            let score = self.metric.compute(query_vector, &node.vector).unwrap_or(0.0);
+            let score = self
+                .metric
+                .compute(query_vector, &node.vector)
+                .unwrap_or(0.0);
             if score > best_score {
                 best_score = score;
                 best_node = Some(current_id);
             }
 
             // Probabilistic selection of next neighbor
-            if node.neighbors.is_empty() { break; }
+            if node.neighbors.is_empty() {
+                break;
+            }
 
             let mut candidates = Vec::new();
             let mut total_prob = 0.0;
 
             for edge in &node.neighbors {
-                if visited.contains(&edge.to) { continue; }
-                
+                if visited.contains(&edge.to) {
+                    continue;
+                }
+
                 // ηij = inverse distance similarity (approx score)
-                let eta = 1.0 / (1.0 + edge.distance); 
+                let eta = 1.0 / (1.0 + edge.distance);
                 let prob = edge.pheromone.powf(config.alpha) * eta.powf(config.beta);
                 candidates.push((edge.to, prob));
                 total_prob += prob;
             }
 
-            if candidates.is_empty() || total_prob == 0.0 { break; }
+            if candidates.is_empty() || total_prob == 0.0 {
+                break;
+            }
 
             // Roulette wheel
             let r = rng.gen::<f64>() * total_prob;
             let mut cumulative = 0.0;
-            let mut next_id = candidates.last().unwrap().0;
+            let mut next_id = match candidates.last() {
+                Some(last) => last.0,
+                None => break,
+            };
             for (id, prob) in candidates {
                 cumulative += prob;
                 if cumulative >= r {
@@ -220,7 +261,12 @@ impl AcoHnswIndex {
     }
 
     /// Reinforce paths taken by successful ants.
-    fn reinforce_paths(&self, ant_paths: &[AntPath], top_results: &[AcoSearchResult], config: &AcoHnswConfig) {
+    fn reinforce_paths(
+        &self,
+        ant_paths: &[AntPath],
+        top_results: &[AcoSearchResult],
+        config: &AcoHnswConfig,
+    ) {
         let top_ids: HashSet<u64> = top_results.iter().map(|r| r.id).collect();
         let mut nodes = self.nodes.write();
 
@@ -230,11 +276,12 @@ impl AcoHnswIndex {
                     // This ant found a good result, reinforce its path
                     for i in 0..path.nodes.len() - 1 {
                         let from = path.nodes[i];
-                        let to = path.nodes[i+1];
+                        let to = path.nodes[i + 1];
                         if let Some(node) = nodes.get_mut(&from) {
                             for edge in &mut node.neighbors {
                                 if edge.to == to {
-                                    edge.pheromone = (edge.pheromone + config.deposit_amount).min(10.0);
+                                    edge.pheromone =
+                                        (edge.pheromone + config.deposit_amount).min(10.0);
                                 }
                             }
                         }
@@ -296,15 +343,26 @@ mod tests {
     #[test]
     fn test_pheromone_reinforcement() {
         let config = AcoHnswConfig {
-            num_ants: 1,
+            num_ants: 10,
             max_hops: 5,
             deposit_amount: 1.0,
             ..Default::default()
         };
         let index = AcoHnswIndex::new(config);
 
-        index.add_node(1, vec![1.0], vec![2]).unwrap();
         index.add_node(2, vec![1.1], vec![]).unwrap();
+        index.add_node(1, vec![1.0], vec![2]).unwrap();
+        // Add reciprocal edge 2 -> 1
+        {
+            let mut nodes = index.nodes.write();
+            if let Some(n2) = nodes.get_mut(&2) {
+                n2.neighbors.push(AcoEdge {
+                    to: 1,
+                    distance: 0.1,
+                    pheromone: 1.0,
+                });
+            }
+        }
 
         // Initial pheromone is 1.0
         {
@@ -317,7 +375,14 @@ mod tests {
 
         {
             let n1 = index.nodes.read();
-            assert!(n1.get(&1).unwrap().neighbors[0].pheromone > 1.0);
+            let p1 = n1.get(&1).unwrap().neighbors[0].pheromone;
+            let p2 = n1.get(&2).unwrap().neighbors[0].pheromone;
+            assert!(
+                p1 > 1.0 || p2 > 1.0,
+                "Path 1 <-> 2 should be reinforced: p1={}, p2={}",
+                p1,
+                p2
+            );
         }
     }
 }

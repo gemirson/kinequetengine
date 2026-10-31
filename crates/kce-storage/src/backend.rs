@@ -105,7 +105,9 @@ impl KineSQL {
     ///
     /// This is zero-copy: the OS page cache serves the data directly.
     pub fn read_mmap(&self, offset: usize, len: usize) -> Option<&[u8]> {
-        self.mmap_reader.as_ref().and_then(|r| r.read_at(offset, len))
+        self.mmap_reader
+            .as_ref()
+            .and_then(|r| r.read_at(offset, len))
     }
 
     /// Return whether an mmap reader is currently attached.
@@ -354,19 +356,20 @@ mod tests {
         let config = PageConfig { size: 2048 };
 
         {
-            let mut db =
-                KineSQL::open_with_config(&wal_path, config).expect("open with config");
+            let mut db = KineSQL::open_with_config(&wal_path, config).expect("open with config");
             db.write(b"cfg_key", b"cfg_val").expect("write");
         }
 
         {
-            let mut db =
-                KineSQL::open_with_config(&wal_path, config).expect("reopen with config");
+            let mut db = KineSQL::open_with_config(&wal_path, config).expect("reopen with config");
             let report = db.recover().expect("recover");
             assert_eq!(report.wal_entries_replayed, 1);
             assert_eq!(report.pages_recovered, 1);
             assert!(report.data_integrity_valid);
-            assert_eq!(db.read(b"cfg_key").expect("read"), Some(b"cfg_val".to_vec()));
+            assert_eq!(
+                db.read(b"cfg_key").expect("read"),
+                Some(b"cfg_val".to_vec())
+            );
         }
 
         let _ = std::fs::remove_dir_all(&dir);

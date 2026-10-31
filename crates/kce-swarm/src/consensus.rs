@@ -2,9 +2,9 @@
 //!
 //! Eventual consistency for data (CRDTs) and Strong consistency for control (Raft-Lite).
 
-use std::collections::HashMap;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 // ── CRDTs (Eventual Consistency) ─────────────────────────────────────────────
@@ -19,7 +19,9 @@ pub struct LwwElement<T: Clone> {
 
 impl<T: Clone> LwwElement<T> {
     pub fn merge(&mut self, other: &Self) {
-        if other.timestamp > self.timestamp || (other.timestamp == self.timestamp && other.source_node_id > self.source_node_id) {
+        if other.timestamp > self.timestamp
+            || (other.timestamp == self.timestamp && other.source_node_id > self.source_node_id)
+        {
             self.value = other.value.clone();
             self.timestamp = other.timestamp;
             self.source_node_id = other.source_node_id;
@@ -79,6 +81,7 @@ pub struct RaftLite {
     current_term: RwLock<u64>,
     voted_for: RwLock<Option<Uuid>>,
     log: RwLock<Vec<RaftLogEntry>>,
+    #[allow(dead_code)]
     commit_index: RwLock<u64>,
 }
 
@@ -111,7 +114,7 @@ impl RaftLite {
         *role = RaftRole::Candidate;
         *term += 1;
         *voted_for = Some(self.local_id);
-        
+
         tracing::info!(term = *term, "Raft: started election");
     }
 

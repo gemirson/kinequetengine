@@ -2,11 +2,11 @@
 //!
 //! Provides a high-performance, asynchronous I/O backend for KineSQL using Linux io_uring.
 
+use io_uring::{opcode, squeue, types, IoUring};
+use parking_lot::Mutex;
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 use std::sync::Arc;
-use io_uring::{opcode, squeue, types, IoUring};
-use parking_lot::Mutex;
 
 use kce_core::error::StorageError;
 
@@ -27,8 +27,8 @@ impl IoUringBackend {
             builder.setup_sqpoll(2000); // 2ms idle timeout for kernel thread
         }
 
-        let ring = builder.build(entries).map_err(|e| StorageError::Io(e))?;
-        
+        let ring = builder.build(entries).map_err(StorageError::Io)?;
+
         Ok(Self {
             ring: Arc::new(Mutex::new(ring)),
             sq_poll,
@@ -54,10 +54,10 @@ impl IoUringBackend {
         unsafe {
             ring.submission()
                 .push(&write_op)
-                .map_err(|_| StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full")))?;
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
-        
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 
@@ -71,7 +71,7 @@ impl IoUringBackend {
         user_data: u64,
     ) -> Result<(), StorageError> {
         let fd = types::Fd(file.as_raw_fd());
-        
+
         // 1. Write op with IO_LINK
         let write_op = opcode::Write::new(fd, data, len)
             .offset(offset)
@@ -80,18 +80,18 @@ impl IoUringBackend {
             .user_data(user_data);
 
         // 2. Fsync op
-        let fsync_op = opcode::Fsync::new(fd)
-            .build()
-            .user_data(user_data + 1);
+        let fsync_op = opcode::Fsync::new(fd).build().user_data(user_data + 1);
 
         let mut ring = self.ring.lock();
         unsafe {
             let mut sq = ring.submission();
-            sq.push(&write_op).map_err(|_| StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full")))?;
-            sq.push(&fsync_op).map_err(|_| StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full")))?;
+            sq.push(&write_op)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
+            sq.push(&fsync_op)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
-        
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 
@@ -99,7 +99,7 @@ impl IoUringBackend {
     pub fn poll_completions(&self) -> Vec<u64> {
         let mut ring = self.ring.lock();
         let mut completed = Vec::new();
-        
+
         while let Some(cqe) = ring.completion().next() {
             if cqe.result() >= 0 {
                 completed.push(cqe.user_data());

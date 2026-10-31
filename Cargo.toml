@@ -102,6 +102,10 @@ harness = false
 name = "kce_stress_bench"
 harness = false
 
+[[bench]]
+name = "caputo_bench"
+harness = false
+
 [lints]
 workspace = true
 

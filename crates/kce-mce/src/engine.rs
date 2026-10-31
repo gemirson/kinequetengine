@@ -78,9 +78,10 @@ struct DispatchOutput {
 /// Dispatch the action based on the mRNA intent and payload.
 fn dispatch_intent(mrna: &Mrna) -> DispatchOutput {
     // Compute a payload hash for deterministic results
-    let payload_hash: u64 = mrna.payload.iter().fold(0u64, |acc, &b| {
-        acc.wrapping_mul(31).wrapping_add(b as u64)
-    });
+    let payload_hash: u64 = mrna
+        .payload
+        .iter()
+        .fold(0u64, |acc, &b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
     let node_count = mrna.payload.len() / 16; // each node encodes to 16 bytes (id + maturity)
 
@@ -145,11 +146,7 @@ fn dispatch_intent(mrna: &Mrna) -> DispatchOutput {
         }
         MrnaIntent::Classify => {
             let confidence = ((payload_hash % 100) as f64) / 100.0;
-            let label = if confidence > 0.5 {
-                "self"
-            } else {
-                "non_self"
-            };
+            let label = if confidence > 0.5 { "self" } else { "non_self" };
             DispatchOutput {
                 result: serde_json::json!({
                     "action": "classify",

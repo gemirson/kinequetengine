@@ -97,6 +97,7 @@ impl EvaporationEngine {
 }
 
 impl Default for EvaporationEngine {
+    #[allow(clippy::expect_used)]
     fn default() -> Self {
         // SAFETY: 0.1 is in (0.0, 1.0)
         Self::new(EvaporationConfig::default()).expect("default rho is valid")

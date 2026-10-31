@@ -7,6 +7,7 @@
 //! 4. Continuous ACO pheromone updates during retrieval.
 //!
 //! Run with: `cargo bench --bench kce_stress_bench`
+#![allow(clippy::expect_used)]
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rayon::prelude::*;
@@ -43,18 +44,21 @@ fn make_queries(count: usize, dim: usize) -> Vec<Vec<f64>> {
 
 fn bench_stress_parallel_queries(c: &mut Criterion) {
     let mut group = c.benchmark_group("kce_stress_parallel");
-    
+
     // Setup: 10,000 vectors of 128 dimensions
     let n_records = 10_000;
     let dim = 128;
     let dataset = make_large_dataset(n_records, dim);
-    let pipeline = Arc::new(PipelineOrchestrator::new(PipelineConfig::default(), dataset));
-    
+    let pipeline = Arc::new(PipelineOrchestrator::new(
+        PipelineConfig::default(),
+        dataset,
+    ));
+
     // Batch of 100 queries to be executed in parallel
     let queries = make_queries(100, dim);
-    
+
     group.sample_size(10); // High-concurrency tests are slow, reduce sample size
-    
+
     group.bench_function(format!("parallel_batch_100_queries_n={n_records}"), |b| {
         b.iter(|| {
             queries.par_iter().for_each(|q| {
@@ -76,7 +80,7 @@ fn bench_stress_parallel_queries(c: &mut Criterion) {
 
 fn bench_stress_throughput(c: &mut Criterion) {
     let mut group = c.benchmark_group("kce_throughput");
-    
+
     let dataset = make_large_dataset(1000, 128);
     let pipeline = PipelineOrchestrator::new(PipelineConfig::default(), dataset);
     let query = make_queries(1, 128).remove(0);

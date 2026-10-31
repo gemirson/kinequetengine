@@ -4,13 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::io::{self, BufRead};
+use std::io;
 use tokio::io::AsyncBufReadExt;
 
-use kce_metrics::sinkhorn::SinkhornMetric;
-use kce_retrieval::engine::{Dataset, RetrievalConfig, RetrievalEngine};
-use kce_ais::classifier::{AisClassifier, Classification};
 use kce_core::traits::DistanceMetric;
+use kce_metrics::cosine::CosineMetric;
+use kce_retrieval::engine::{Dataset, RetrievalConfig, RetrievalEngine};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct JsonRpcRequest {
@@ -94,8 +93,8 @@ fn handle_request(line: &str) -> JsonRpcResponse {
                         }
                     },
                     {
-                        "name": "kce_sinkhorn",
-                        "description": "Compute Sinkhorn optimal transport distance between distributions",
+                        "name": "kce_cosine",
+                        "description": "Compute Cosine similarity distance between vectors",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -116,7 +115,7 @@ fn handle_request(line: &str) -> JsonRpcResponse {
 
             let result = match tool_name {
                 "kce_retrieve" => call_kce_retrieve(args),
-                "kce_sinkhorn" => call_kce_sinkhorn(args),
+                "kce_cosine" => call_kce_cosine(args),
                 _ => return error_response(id, -32601, "Method not found"),
             };
 
@@ -148,25 +147,29 @@ fn error_response(id: Option<Value>, code: i32, message: &str) -> JsonRpcRespons
 }
 
 fn call_kce_retrieve(args: &Value) -> Result<String, String> {
-    let query_vector: Vec<f64> = serde_json::from_value(args["query_vector"].clone())
-        .map_err(|e| e.to_string())?;
+    let query_vector: Vec<f64> =
+        serde_json::from_value(args["query_vector"].clone()).map_err(|e| e.to_string())?;
     let top_k = args["top_k"].as_u64().unwrap_or(5) as usize;
 
     let engine = RetrievalEngine::new(RetrievalConfig::default());
     let mut ds = Dataset::new(query_vector.len());
     // For MCP demo, we use an empty or sample dataset if not provided
     // In production, this would connect to the running KCE server or KineSQL
-    ds.push(1, query_vector.clone()).ok(); 
+    ds.push(1, query_vector.clone()).ok();
 
-    let results = engine.search(&query_vector, &ds, top_k).map_err(|e| e.to_string())?;
+    let results = engine
+        .search(&query_vector, &ds, top_k)
+        .map_err(|e| e.to_string())?;
     Ok(serde_json::to_string_pretty(&results).unwrap_or_default())
 }
 
-fn call_kce_sinkhorn(args: &Value) -> Result<String, String> {
-    let a: Vec<f64> = serde_json::from_value(args["vector_a"].clone()).map_err(|e| e.to_string())?;
-    let b: Vec<f64> = serde_json::from_value(args["vector_b"].clone()).map_err(|e| e.to_string())?;
+fn call_kce_cosine(args: &Value) -> Result<String, String> {
+    let a: Vec<f64> =
+        serde_json::from_value(args["vector_a"].clone()).map_err(|e| e.to_string())?;
+    let b: Vec<f64> =
+        serde_json::from_value(args["vector_b"].clone()).map_err(|e| e.to_string())?;
 
-    let metric = SinkhornMetric::with_defaults();
-    let dist = metric.compute(&a, &b).map_err(|e| e.to_string())?;
-    Ok(format!("{}", dist))
+    let metric = CosineMetric::new();
+    let sim = metric.compute(&a, &b).map_err(|e| e.to_string())?;
+    Ok(format!("{}", sim))
 }

@@ -17,7 +17,7 @@ impl KceGateway for KceGatewayService {
         request: Request<SearchRequest>,
     ) -> Result<Response<SearchResponse>, Status> {
         let _req = request.into_inner();
-        
+
         // Simplified search mock for FT-031 MVP.
         // In full implementation, this routes to a shard node via FT-028.
         Ok(Response::new(SearchResponse {
@@ -34,6 +34,8 @@ impl KceGateway for KceGatewayService {
     ) -> Result<Response<Self::StreamTelemetryStream>, Status> {
         // Simplified stream for FT-031 MVP.
         let output = tokio_stream::iter(vec![]);
-        Ok(Response::new(Box::pin(output) as Self::StreamTelemetryStream))
+        Ok(Response::new(
+            Box::pin(output) as Self::StreamTelemetryStream
+        ))
     }
 }
