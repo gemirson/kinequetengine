@@ -239,7 +239,10 @@ impl AcoHnswIndex {
             // Roulette wheel
             let r = rng.gen::<f64>() * total_prob;
             let mut cumulative = 0.0;
-            let mut next_id = candidates.last().unwrap().0;
+            let mut next_id = match candidates.last() {
+                Some(last) => last.0,
+                None => break,
+            };
             for (id, prob) in candidates {
                 cumulative += prob;
                 if cumulative >= r {

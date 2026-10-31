@@ -69,6 +69,7 @@ pub struct Colony {
 
 impl Colony {
     /// Create a new colony with the given configuration.
+    #[allow(clippy::expect_used)]
     pub fn new(config: ColonyConfig) -> Self {
         let evaporation = EvaporationEngine::new(EvaporationConfig {
             rho: config.evaporation_rate,

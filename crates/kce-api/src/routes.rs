@@ -299,7 +299,7 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
     // Storage check: verify if we can perform a dummy read/write
     let mut storage_ok = false;
     if let Some(ref storage_arc) = state.pipeline.storage {
-        let mut storage = storage_arc.write();
+        let storage = storage_arc.write();
         storage_ok = storage.read(b"healthcheck:probe").is_ok();
     }
 

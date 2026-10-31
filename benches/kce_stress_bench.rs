@@ -7,6 +7,7 @@
 //! 4. Continuous ACO pheromone updates during retrieval.
 //!
 //! Run with: `cargo bench --bench kce_stress_bench`
+#![allow(clippy::expect_used)]
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rayon::prelude::*;

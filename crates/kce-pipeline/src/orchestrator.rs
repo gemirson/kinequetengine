@@ -472,7 +472,7 @@ impl PipelineOrchestrator {
     }
 
     /// Load volatile state from durable storage.
-    pub fn load_checkpoint(&self, storage: &dyn StorageBackend) -> Result<(), KceError> {
+    pub fn load_checkpoint(&self, _storage: &dyn StorageBackend) -> Result<(), KceError> {
         // ... (código existente)
         Ok(())
     }

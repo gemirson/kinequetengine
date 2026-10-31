@@ -81,6 +81,7 @@ pub struct RaftLite {
     current_term: RwLock<u64>,
     voted_for: RwLock<Option<Uuid>>,
     log: RwLock<Vec<RaftLogEntry>>,
+    #[allow(dead_code)]
     commit_index: RwLock<u64>,
 }
 

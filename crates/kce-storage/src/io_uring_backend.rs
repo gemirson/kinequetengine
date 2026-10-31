@@ -27,7 +27,7 @@ impl IoUringBackend {
             builder.setup_sqpoll(2000); // 2ms idle timeout for kernel thread
         }
 
-        let ring = builder.build(entries).map_err(|e| StorageError::Io(e))?;
+        let ring = builder.build(entries).map_err(StorageError::Io)?;
 
         Ok(Self {
             ring: Arc::new(Mutex::new(ring)),
@@ -52,12 +52,12 @@ impl IoUringBackend {
 
         let mut ring = self.ring.lock();
         unsafe {
-            ring.submission().push(&write_op).map_err(|_| {
-                StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full"))
-            })?;
+            ring.submission()
+                .push(&write_op)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
 
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 
@@ -85,15 +85,13 @@ impl IoUringBackend {
         let mut ring = self.ring.lock();
         unsafe {
             let mut sq = ring.submission();
-            sq.push(&write_op).map_err(|_| {
-                StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full"))
-            })?;
-            sq.push(&fsync_op).map_err(|_| {
-                StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full"))
-            })?;
+            sq.push(&write_op)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
+            sq.push(&fsync_op)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
 
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 

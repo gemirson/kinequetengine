@@ -80,7 +80,7 @@ impl ShardRouter {
                         .min_by(|a, b| {
                             a.1.cpu_utilization
                                 .partial_cmp(&b.1.cpu_utilization)
-                                .unwrap()
+                                .unwrap_or(std::cmp::Ordering::Equal)
                         })
                     {
                         tracing::debug!(?shard, "ACTA: delegating query to node {}", alternate.0);

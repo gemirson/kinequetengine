@@ -2,12 +2,13 @@
 //!
 //! Run with: `cargo bench --bench pipeline_bench`
 
+#![allow(clippy::expect_used)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-use kce_aco::ant::{AntConfig, CandidateEdge};
+use kce_aco::ant::CandidateEdge;
 use kce_aco::colony::{Colony, ColonyConfig};
 use kce_aco::pheromone::{PheromoneConfig, PheromoneMap};
-use kce_core::traits::DistanceMetric;
 use kce_core::types::ContextInput;
 use kce_pipeline::orchestrator::{PipelineConfig, PipelineOrchestrator};
 use kce_retrieval::engine::{Dataset, RetrievalEngine};

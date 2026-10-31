@@ -13,4 +13,5 @@ Cargo.lock
 # Web dashboard
 dashboard/node_modules/
 dashboard/dist/
+dashboard/.vite/
 

@@ -65,15 +65,13 @@ impl IoUringSplicer {
         let mut ring = self.ring.lock();
         unsafe {
             let mut sq = ring.submission();
-            sq.push(&op1).map_err(|_| {
-                StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full"))
-            })?;
-            sq.push(&op2).map_err(|_| {
-                StorageError::Io(std::io::Error::new(std::io::ErrorKind::Other, "SQ full"))
-            })?;
+            sq.push(&op1)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
+            sq.push(&op2)
+                .map_err(|_| StorageError::Io(std::io::Error::other("SQ full")))?;
         }
 
-        ring.submit().map_err(|e| StorageError::Io(e))?;
+        ring.submit().map_err(StorageError::Io)?;
         Ok(())
     }
 }

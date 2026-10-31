@@ -11,13 +11,14 @@ use kce_mce::engine::MceEngine;
 use kce_pipeline::orchestrator::{PipelineConfig, PipelineOrchestrator};
 use kce_retrieval::engine::Dataset;
 use kce_storage::backend::KineSQL;
-use kce_swarm::{GossipNode, RaftLite, ShardRouter};
+use kce_swarm::{GossipNode, RaftLite};
 use parking_lot::RwLock;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 /// KCE runtime configuration populated from environment variables.
 #[derive(Debug)]
+#[allow(dead_code)]
 struct KceConfig {
     port: String,
     host: String,
@@ -93,7 +94,7 @@ async fn main() {
     pipeline_raw.storage = Some(Arc::clone(&shared_storage) as Arc<RwLock<dyn StorageBackend>>);
     let pipeline = Arc::new(pipeline_raw);
 
-    let raft = Arc::new(RaftLite::new(local_node_id));
+    let _raft = Arc::new(RaftLite::new(local_node_id));
 
     // 3. Initialize Swarm Gossip (FT-029)
     let swarm_addr = format!("{}:{}", config.host, config.swarm_port)
@@ -105,7 +106,7 @@ async fn main() {
             .expect("failed to start gossip"),
     );
 
-    let pipeline_gossip = Arc::clone(&pipeline);
+    let _pipeline_gossip = Arc::clone(&pipeline);
     tokio::spawn(async move {
         gossip
             .listen(move |packet| {

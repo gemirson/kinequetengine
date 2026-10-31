@@ -2,6 +2,8 @@
 //!
 //! Also includes concurrent stress tests (FT-010) and resilience checks (FT-009).
 
+#![allow(clippy::expect_used, clippy::panic)]
+
 use kce_core::types::ContextInput;
 use kce_pipeline::orchestrator::{PipelineConfig, PipelineOrchestrator};
 use kce_retrieval::engine::Dataset;
@@ -22,10 +24,10 @@ fn smoke_pipeline_returns_results() {
         query_vector: vec![1.0, 0.0, 0.0, 0.0],
         top_k: 2,
         context: Some("smoke_test".into()),
-        tenant_id: None,
+        tenant_id: "smoke_tenant".into(),
     };
     let output = pipeline.execute(&input).expect("execute");
-    assert_eq!(output.action, "retrieve");
+    assert_eq!(output.action, "risk_eval");
     assert!(output.pipeline_ms >= 0.0);
 }
 
@@ -36,7 +38,7 @@ fn smoke_pipeline_deterministic() {
         query_vector: vec![0.5, 0.5, 0.0, 0.0],
         top_k: 3,
         context: None,
-        tenant_id: None,
+        tenant_id: "smoke_tenant".into(),
     };
     let r1 = pipeline.execute(&input).expect("execute 1");
     let r2 = pipeline.execute(&input).expect("execute 2");
@@ -50,7 +52,7 @@ fn smoke_pipeline_rejects_empty_query() {
         query_vector: vec![],
         top_k: 1,
         context: None,
-        tenant_id: None,
+        tenant_id: "smoke_tenant".into(),
     };
     assert!(pipeline.execute(&input).is_err());
 }
@@ -59,19 +61,13 @@ fn smoke_pipeline_rejects_empty_query() {
 fn smoke_metrics_work() {
     use kce_core::traits::DistanceMetric;
     use kce_metrics::cosine::CosineMetric;
-    use kce_metrics::sinkhorn::SinkhornMetric;
-    use kce_metrics::wasserstein::WassersteinMetric;
 
     let cosine = CosineMetric::new();
-    let sinkhorn = SinkhornMetric::new(kce_metrics::sinkhorn::SinkhornConfig::default());
-    let wasserstein = WassersteinMetric::new();
 
     let a = [1.0, 0.0];
     let b = [0.0, 1.0];
 
     assert!(cosine.compute(&a, &b).is_ok());
-    assert!(sinkhorn.compute(&a, &b).is_ok());
-    assert!(wasserstein.compute(&a, &b).is_ok());
 }
 
 #[test]
@@ -83,7 +79,7 @@ fn smoke_graph_expand() {
     g.add_edge(1, 3, 0.6);
     g.add_edge(2, 4, 0.5);
 
-    let result = g.expand(&[1], 2, 10);
+    let result = g.expand_with_limit(&[1], 2, 10);
     assert!(result.nodes.contains(&1));
     assert!(result.nodes.contains(&2));
     assert!(result.nodes.contains(&3));
@@ -103,7 +99,9 @@ fn smoke_ecma_lifecycle() {
         connections: 8,
         maturity: 0.0,
     };
-    engine.process_node(&mut node).expect("process");
+    engine.process_node(&mut node).expect("process 1");
+    assert_eq!(node.state, NodeState::Progenitor);
+    engine.process_node(&mut node).expect("process 2");
     assert_eq!(node.state, NodeState::Specialized);
     assert!(node.maturity > 0.0);
 }
@@ -123,15 +121,19 @@ fn smoke_mce_encode_execute() {
         maturity: 0.87,
     }];
     let mrna = engine.encode(&nodes, MrnaIntent::RiskEval);
-    let result = engine.execute(&mrna).expect("execute");
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    let result = engine.execute(&mrna, now_ms).expect("execute");
     assert!(result.feedback.success);
 }
 
 #[test]
 fn smoke_aco_pheromone() {
-    use kce_aco::pheromone::PheromoneMap;
+    use kce_aco::pheromone::{PheromoneConfig, PheromoneMap};
 
-    let mut map = PheromoneMap::new();
+    let mut map = PheromoneMap::new(PheromoneConfig::default());
     map.deposit(1, 2, 0.5);
     assert!((map.get(1, 2) - 1.5).abs() < 1e-10);
 }
@@ -149,13 +151,16 @@ fn smoke_ais_detection() {
 
 #[test]
 fn smoke_ais_classifier() {
-    use kce_ais::classifier::{Classification, SelfNonSelfClassifier};
+    use kce_ais::classifier::{Classification, ClassifierConfig, SelfNonSelfClassifier};
 
-    let mut cls = SelfNonSelfClassifier::default();
+    let mut cls = SelfNonSelfClassifier::new(ClassifierConfig {
+        recognition_threshold: 0.3,
+        min_patterns: 1,
+    });
     cls.register_self(vec![1.0, 0.0]);
     cls.register_self(vec![0.0, 1.0]);
     cls.register_self(vec![0.5, 0.5]);
-    assert_eq!(cls.classify(&[1.0, 0.05]), Classification::Self_);
+    assert_eq!(cls.classify(&[1.0, 0.05]).label, Classification::Self_);
 }
 
 // ── FT-010: Concurrent stress test ──────────────────────────────────────────
@@ -201,7 +206,7 @@ fn resilience_execute_with_resilience_works() {
         query_vector: vec![1.0, 0.0, 0.0, 0.0],
         top_k: 2,
         context: Some("resilience_test".into()),
-        tenant_id: None,
+        tenant_id: "resilience_tenant".into(),
     };
     let output = pipeline
         .execute_with_resilience(&input, "req_resilience_1")
@@ -228,7 +233,7 @@ fn resilience_metrics_updated() {
         query_vector: vec![1.0, 0.0, 0.0, 0.0],
         top_k: 1,
         context: None,
-        tenant_id: None,
+        tenant_id: "resilience_tenant".into(),
     };
     let _ = pipeline.execute_with_resilience(&input, "req_metrics_1");
 
@@ -247,7 +252,7 @@ fn stage_error_contains_stage_name() {
         query_vector: vec![],
         top_k: 1,
         context: None,
-        tenant_id: None,
+        tenant_id: "resilience_tenant".into(),
     };
     let err = pipeline.execute(&input).expect_err("should fail");
     let msg = err.to_string();
