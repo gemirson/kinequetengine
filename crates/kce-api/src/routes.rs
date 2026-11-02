@@ -7,14 +7,17 @@
 
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use tokio_stream::StreamExt;
 use tower_http::limit::RequestBodyLimitLayer;
 
 use kce_core::error::KceError;
@@ -120,6 +123,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .merge(post_routes)
         .route("/health", get(health_handler))
+        .route("/events", get(events_handler))
         .route("/metrics", get(metrics_handler))
         .with_state(state)
 }
@@ -336,6 +340,22 @@ async fn query_handler(
                 .into_response()
         }
     }
+}
+
+/// Server-sent events stream of [`EngineEvent`]s.
+///
+/// Send `data: {"type":"...", ...}` frames; keep-alive every 15s.
+async fn events_handler(
+    State(state): State<Arc<AppState>>,
+) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
+    let rx = state.events.subscribe();
+    let stream = tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|item| {
+        // Lagged/Closed are non-fatal; drop them instead of panicking.
+        item.ok()
+            .and_then(|ev| serde_json::to_string(&ev).ok())
+            .map(|json| Ok(Event::default().data(json)))
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
 /// GET /health handler (FT-012: smart healthcheck).
@@ -767,5 +787,29 @@ mod tests {
                 .unwrap();
             assert_ne!(response.status(), StatusCode::UNAUTHORIZED, "uri {uri}");
         }
+    }
+
+    #[tokio::test]
+    async fn events_endpoint_is_sse() {
+        let state = test_state();
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .uri("/events")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(axum::http::header::CONTENT_TYPE)
+            .expect("content-type")
+            .to_str()
+            .unwrap()
+            .to_string();
+        assert!(content_type.starts_with("text/event-stream"));
+        // Intentionally do NOT collect the body: the stream stays open.
     }
 }
