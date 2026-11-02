@@ -388,6 +388,8 @@ pub struct PipelineOrchestrator {
     config: PipelineConfig,
     /// Semantic graph for contextual expansion (FT-002).
     graph: parking_lot::RwLock<SemanticGraph>,
+    /// Registered ECMA nodes surfaced through the API (GET /graph).
+    node_registry: parking_lot::RwLock<BTreeMap<u64, EcmaNode>>,
     /// ECMA engine for node lifecycle (FT-003).
     ecma: EcmaEngine,
     /// MCE engine for mRNA encoding/execution (FT-004).
@@ -420,6 +422,7 @@ impl PipelineOrchestrator {
             retrieval: RetrievalEngine::new(config.retrieval.clone()),
             dataset: parking_lot::RwLock::new(dataset),
             graph: parking_lot::RwLock::new(SemanticGraph::new()),
+            node_registry: parking_lot::RwLock::new(BTreeMap::new()),
             ecma: EcmaEngine::with_defaults(),
             mce: MceEngine::with_defaults(),
             pheromone_map: PheromoneMap::new(PheromoneConfig::default()).shared(),
@@ -440,6 +443,85 @@ impl PipelineOrchestrator {
     /// Get the pipeline configuration.
     pub fn config(&self) -> &PipelineConfig {
         &self.config
+    }
+
+    /// List all registered ECMA nodes (sorted by id).
+    pub fn list_nodes(&self) -> Vec<EcmaNode> {
+        self.node_registry.read().values().cloned().collect()
+    }
+
+    /// List all unique undirected edges of the semantic graph.
+    pub fn graph_edges(&self) -> Vec<kce_graph::graph::Edge> {
+        self.graph.read().edges()
+    }
+
+    /// Snapshot of pheromone levels keyed by `(from, to)` exactly as deposited.
+    pub fn pheromone_levels(&self) -> HashMap<(u64, u64), f64> {
+        self.pheromone_map
+            .read()
+            .all_entries()
+            .iter()
+            .map(|(k, v)| (*k, v.level))
+            .collect()
+    }
+
+    /// Insert a node, or merge into an existing one (increments `usage_count`,
+    /// takes latest `state`/`entropy`/`maturity`).
+    pub fn upsert_node(&self, node: EcmaNode) {
+        let mut reg = self.node_registry.write();
+        match reg.entry(node.id) {
+            std::collections::btree_map::Entry::Occupied(mut occ) => {
+                let existing = occ.get_mut();
+                existing.usage_count += 1;
+                existing.state = node.state;
+                existing.entropy = node.entropy;
+                existing.maturity = node.maturity;
+                existing.connections = node.connections;
+            }
+            std::collections::btree_map::Entry::Vacant(vac) => {
+                vac.insert(node);
+            }
+        }
+    }
+
+    /// Set a node's lifecycle state. Returns `None` if the node is unknown.
+    pub fn set_node_state(&self, id: u64, state: NodeState) -> Option<EcmaNode> {
+        self.node_registry.write().get_mut(&id).map(|n| {
+            n.state = state;
+            n.clone()
+        })
+    }
+
+    /// Connect two registered nodes (bidirectional edge). Returns `false`
+    /// when either node is not registered.
+    pub fn connect(&self, from: u64, to: u64, weight: f64) -> bool {
+        {
+            let reg = self.node_registry.read();
+            if !reg.contains_key(&from) || !reg.contains_key(&to) {
+                return false;
+            }
+        }
+        let mut graph = self.graph.write();
+        graph.add_edge(from, to, weight);
+        let from_edges = graph.neighbors(from).len();
+        let to_edges = graph.neighbors(to).len();
+        drop(graph);
+        let mut reg = self.node_registry.write();
+        if let Some(n) = reg.get_mut(&from) {
+            n.connections = from_edges;
+        }
+        if let Some(n) = reg.get_mut(&to) {
+            n.connections = to_edges;
+        }
+        true
+    }
+
+    /// Remove a node from the registry and the graph. Returns `false` when
+    /// the node was not registered (graph cleanup still runs).
+    pub fn remove_node(&self, id: u64) -> bool {
+        let removed = self.node_registry.write().remove(&id).is_some();
+        self.graph.write().remove_node(id);
+        removed
     }
 
     /// Persist volatile state (ACO pheromones, AIS memory) to durable storage.
@@ -745,6 +827,7 @@ impl PipelineOrchestrator {
             if let Err(e) = self.ecma.process_node(&mut node) {
                 tracing::warn!(node_id = result.id, error = %e, "ECMA update failed for node");
             }
+            self.upsert_node(node);
         }
         Ok(())
     }
@@ -1104,5 +1187,130 @@ mod tests {
         let snap = pipeline.metrics.latency_histogram.percentiles();
         assert!(snap.count >= 1);
         assert!(snap.p99_us > 0);
+    }
+
+    // ── Node registry tests ────────────────────────────────────────────────
+
+    #[test]
+    fn upsert_creates_then_increments_usage() {
+        let p = sample_pipeline();
+        assert!(p.list_nodes().is_empty());
+        p.upsert_node(EcmaNode {
+            id: 7,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 0.5,
+            connections: 0,
+            maturity: 0.0,
+        });
+        p.upsert_node(EcmaNode {
+            id: 7,
+            state: NodeState::Progenitor,
+            usage_count: 1,
+            entropy: 0.4,
+            connections: 0,
+            maturity: 0.3,
+        });
+        let nodes = p.list_nodes();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0].usage_count, 2);
+        assert_eq!(nodes[0].state, NodeState::Progenitor);
+        assert_eq!(nodes[0].maturity, 0.3);
+    }
+
+    #[test]
+    fn set_node_state_updates_registry() {
+        let p = sample_pipeline();
+        p.upsert_node(EcmaNode {
+            id: 1,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        assert!(p.set_node_state(1, NodeState::Apoptosis).is_some());
+        assert_eq!(p.list_nodes()[0].state, NodeState::Apoptosis);
+        assert!(p.set_node_state(99, NodeState::Stem).is_none());
+    }
+
+    #[test]
+    fn connect_links_existing_nodes_only() {
+        let p = sample_pipeline();
+        p.upsert_node(EcmaNode {
+            id: 1,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        p.upsert_node(EcmaNode {
+            id: 2,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        assert!(p.connect(1, 2, 0.5));
+        assert!(!p.connect(1, 99, 0.5)); // unknown target
+        let edges = p.graph_edges();
+        assert_eq!(edges.len(), 1);
+        assert_eq!((edges[0].from, edges[0].to), (1, 2));
+        assert_eq!(p.list_nodes()[0].connections, 1);
+    }
+
+    #[test]
+    fn remove_node_clears_registry_and_graph() {
+        let p = sample_pipeline();
+        p.upsert_node(EcmaNode {
+            id: 1,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        p.upsert_node(EcmaNode {
+            id: 2,
+            state: NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        p.connect(1, 2, 0.5);
+        assert!(p.remove_node(1));
+        assert!(!p.remove_node(1)); // second call = false
+        assert_eq!(p.list_nodes().len(), 1);
+        assert!(p.graph_edges().is_empty());
+    }
+
+    #[test]
+    fn query_populates_node_registry() {
+        let p = sample_pipeline();
+        let ctx = ContextInput {
+            query_vector: vec![1.0, 0.0],
+            top_k: 2,
+            context: None,
+            tenant_id: "t".into(),
+        };
+        let _ = p.execute(&ctx).expect("execute");
+        let nodes = p.list_nodes();
+        assert!(!nodes.is_empty());
+        assert!(nodes.iter().any(|n| n.id == 1));
+    }
+
+    #[test]
+    fn pheromone_levels_exposed_as_map() {
+        let p = sample_pipeline();
+        {
+            let mut pher = p.pheromone_map.write();
+            pher.deposit(1, 2, 0.5);
+        }
+        let levels = p.pheromone_levels();
+        assert!(levels.contains_key(&(1, 2)));
+        assert!(*levels.get(&(1, 2)).expect("level") > 1.0);
     }
 }
