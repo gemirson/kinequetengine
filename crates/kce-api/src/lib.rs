@@ -14,5 +14,6 @@
 #![deny(unsafe_code)]
 #![deny(clippy::unwrap_used)]
 
+pub mod events;
 pub mod middleware;
 pub mod routes;

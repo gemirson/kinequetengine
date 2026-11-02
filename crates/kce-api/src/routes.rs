@@ -95,6 +95,10 @@ pub struct AppState {
     pub metric_error_count: AtomicU64,
     /// Real metrics: cumulative total request count.
     pub metric_total_count: AtomicU64,
+    /// Broadcast bus for SSE (`GET /events`).
+    pub events: crate::events::EngineEventTx,
+    /// Monotonic node id generator (first id: 10_000).
+    pub node_seq: AtomicU64,
 }
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -272,6 +276,13 @@ async fn query_handler(
                 .metric_retrieval_hits
                 .fetch_add(output.stages.len() as u64, Ordering::Relaxed);
             state.metric_total_count.fetch_add(1, Ordering::Relaxed);
+
+            let _ = state
+                .events
+                .send(crate::events::EngineEvent::QueryCompleted {
+                    latency_ms: output.pipeline_ms,
+                    action: output.action.clone(),
+                });
 
             (StatusCode::OK, Json(output)).into_response()
         }
@@ -505,7 +516,8 @@ mod tests {
     use tower::ServiceExt;
 
     fn test_state() -> Arc<AppState> {
-        let dataset = Dataset::new(128);
+        let mut dataset = Dataset::new(128);
+        let _ = dataset.push(1, vec![1.0; 128]);
         let pipeline = PipelineOrchestrator::new(PipelineConfig::default(), dataset);
         Arc::new(AppState {
             pipeline: Arc::new(pipeline),
@@ -517,6 +529,8 @@ mod tests {
             metric_retrieval_hits: AtomicU64::new(0),
             metric_error_count: AtomicU64::new(0),
             metric_total_count: AtomicU64::new(0),
+            events: tokio::sync::broadcast::channel(crate::events::EVENT_CHANNEL_CAPACITY).0,
+            node_seq: AtomicU64::new(10_000),
         })
     }
 
@@ -633,5 +647,41 @@ mod tests {
         assert!(limiter.try_acquire("tenant-b", 1));
         limiter.release("tenant-a");
         limiter.release("tenant-b");
+    }
+
+    #[tokio::test]
+    async fn query_publishes_completed_event() {
+        let state = test_state();
+        let mut rx = state.events.subscribe();
+        let body = serde_json::json!({
+            "query_vector": vec![1.0f64; 128],
+            "top_k": 5
+        });
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/query")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .header("x-tenant-id", "tenant-dev")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        assert_eq!(status, StatusCode::OK);
+        let ev = tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv())
+            .await
+            .expect("event timeout")
+            .expect("channel open");
+        assert!(
+            matches!(ev, crate::events::EngineEvent::QueryCompleted { .. }),
+            "unexpected event: {ev:?}"
+        );
+        if let crate::events::EngineEvent::QueryCompleted { latency_ms, action } = ev {
+            assert!(latency_ms >= 0.0);
+            assert!(!action.is_empty());
+        }
     }
 }

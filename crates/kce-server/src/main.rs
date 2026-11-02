@@ -151,6 +151,8 @@ async fn main() {
         metric_retrieval_hits: AtomicU64::new(0),
         metric_error_count: AtomicU64::new(0),
         metric_total_count: AtomicU64::new(0),
+        events: tokio::sync::broadcast::channel(kce_api::events::EVENT_CHANNEL_CAPACITY).0,
+        node_seq: AtomicU64::new(10_000),
     });
 
     let app = build_router(state.clone())
