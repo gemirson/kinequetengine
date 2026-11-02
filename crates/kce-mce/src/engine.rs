@@ -218,11 +218,7 @@ mod tests {
         let mrna = engine.encode(&[sample_node()], MrnaIntent::RiskEval);
         // created 10000ms ago, ttl is only 5000ms by default
         let result = engine.execute(&mrna, now_ms() - 10_000);
-        assert!(result.is_err());
-        match result {
-            Err(KceError::MrnaExpired { .. }) => {}
-            other => panic!("expected MrnaExpired, got {:?}", other),
-        }
+        assert!(matches!(result, Err(KceError::MrnaExpired { .. })));
     }
 
     #[test]

@@ -2,6 +2,7 @@
 
 #![deny(unsafe_code)]
 #![deny(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 use kce_core::types::{ActionFeedback, EcmaNode, NodeState};
 use kce_ecma::engine::EcmaEngine;

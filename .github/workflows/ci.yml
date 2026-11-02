@@ -73,10 +73,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: dashboard/package-lock.json
 
-      - name: Build dashboard
+      - name: Verify OpenAPI spec, run dashboard tests and build
         run: |
+          cargo run -p kce-api --example export_openapi dashboard/openapi.json
+          git diff --exit-code dashboard/openapi.json
           cd dashboard
           npm ci || npm install
+          npm run test
+          npm run codegen
+          git diff --exit-code src/api/schema.d.ts
           npm run build
 
       - name: Upload build artifacts

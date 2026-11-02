@@ -2,6 +2,8 @@
 //!
 //! Utiliza PyO3 para expor funcionalidades de alta performance do Rust para Python.
 
+#![allow(clippy::useless_conversion)]
+
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 

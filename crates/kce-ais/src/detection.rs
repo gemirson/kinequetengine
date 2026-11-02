@@ -360,7 +360,6 @@ mod tests {
             warmup_count: 2,
             window_size: 100,
             threshold: 0.1,
-            ..Default::default()
         };
         let mut detector = ImmuneDetector::new(config);
         detector.add_pattern(vec![0.0, 0.0]);

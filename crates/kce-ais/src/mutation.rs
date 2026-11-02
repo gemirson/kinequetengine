@@ -314,12 +314,12 @@ mod tests {
         // Run 1
         let mut mutator1 = AdaptiveMutator::default();
         mutator1.set_seed(7777);
-        let result1 = mutator1.explore_mutations(original, 20, &fitness);
+        let result1 = mutator1.explore_mutations(original, 20, fitness);
 
         // Run 2 with same seed
         let mut mutator2 = AdaptiveMutator::default();
         mutator2.set_seed(7777);
-        let result2 = mutator2.explore_mutations(original, 20, &fitness);
+        let result2 = mutator2.explore_mutations(original, 20, fitness);
 
         assert_eq!(result1.selected, result2.selected);
         assert!((result1.selected_score - result2.selected_score).abs() < 1e-15);
@@ -336,7 +336,7 @@ mod tests {
         mutator.set_seed(42);
 
         let original = &[1.0, 1.0];
-        let result = mutator.explore_mutations(original, 10, &fitness);
+        let result = mutator.explore_mutations(original, 10, fitness);
 
         // All fields should be populated
         assert_eq!(result.original, vec![1.0, 1.0]);
