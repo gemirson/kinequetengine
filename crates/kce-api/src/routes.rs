@@ -19,6 +19,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 use tower_http::limit::RequestBodyLimitLayer;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use kce_core::error::KceError;
 use kce_core::types::{ContextInput, EcmaNode, HealthReport, HealthStatus, Mrna, MrnaIntent};
@@ -111,6 +113,48 @@ pub struct AppState {
 /// Maximum request body size: 1 MiB.
 const MAX_BODY_SIZE: usize = 1024 * 1024;
 
+/// OpenAPI documentation.
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        query_handler,
+        encode_handler,
+        action_handler,
+        events_handler,
+        graph_handler,
+        create_node_handler,
+        delete_node_handler,
+        set_node_state_handler,
+        deposit_handler,
+        ais_probe_handler,
+        health_handler,
+        metrics_handler,
+    ),
+    components(
+        schemas(
+            QueryBody,
+            QueryResponseBody,
+            EncodeBody,
+            ActionBody,
+            GraphNodeDto,
+            GraphEdgeDto,
+            GraphResponse,
+            ErrorBody,
+            CreateNodeRequest,
+            CreateNodeResponse,
+            SetNodeStateRequest,
+            DepositRequest,
+            DepositResponse,
+            AisProbeRequest,
+            AisProbeResponse,
+        )
+    ),
+    tags(
+        (name = "kce", description = "KineContext Engine API")
+    )
+)]
+pub struct ApiDoc;
+
 /// Build the Axum router with all routes.
 ///
 /// POST endpoints (/query, /encode, /action) are wrapped in a
@@ -126,14 +170,18 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/ais/probe", post(ais_probe_handler))
         .layer(RequestBodyLimitLayer::new(MAX_BODY_SIZE));
 
-    Router::new()
+    let api_routes = Router::new()
         .merge(post_routes)
         .route("/health", get(health_handler))
         .route("/events", get(events_handler))
         .route("/graph", get(graph_handler))
         .route("/nodes/:id", delete(delete_node_handler))
         .route("/metrics", get(metrics_handler))
-        .with_state(state)
+        .with_state(state);
+
+    Router::new()
+        .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
+        .merge(api_routes)
 }
 
 /// Build the CORS layer from `KCE_CORS_ORIGINS` (comma-separated origins).
@@ -174,14 +222,14 @@ pub fn cors_layer() -> tower_http::cors::CorsLayer {
 // ── Request / Response types ─────────────────────────────────────────────────
 
 /// Request body for POST /query.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct QueryBody {
     pub query_vector: Vec<f64>,
     pub top_k: usize,
 }
 
 /// Response body for POST /query.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct QueryResponseBody {
     pub action: String,
     pub result: serde_json::Value,
@@ -190,25 +238,28 @@ pub struct QueryResponseBody {
 }
 
 /// Request body for POST /encode (FT-006).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct EncodeBody {
+    #[schema(value_type = Vec<Object>)]
     pub nodes: Vec<EcmaNode>,
     pub intent: String,
 }
 
 /// Request body for POST /action (FT-006).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct ActionBody {
+    #[schema(value_type = Object)]
     pub mrna: Mrna,
     pub created_at_ms: u64,
 }
 
 /// A graph node as exposed by `GET /graph`.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GraphNodeDto {
     /// Node id.
     pub id: u64,
     /// ECMA lifecycle state.
+    #[schema(value_type = String, example = "Stem")]
     pub state: kce_core::types::NodeState,
     /// Usage counter.
     pub usage_count: u64,
@@ -221,7 +272,7 @@ pub struct GraphNodeDto {
 }
 
 /// A graph edge as exposed by `GET /graph`.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GraphEdgeDto {
     /// Source node id.
     pub from: u64,
@@ -232,7 +283,7 @@ pub struct GraphEdgeDto {
 }
 
 /// Response of `GET /graph`.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GraphResponse {
     /// Registered ECMA nodes.
     pub nodes: Vec<GraphNodeDto>,
@@ -243,7 +294,7 @@ pub struct GraphResponse {
 }
 
 /// Uniform error body used by non-Json-pipeline handlers.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct ErrorBody {
     /// Machine-readable code.
     pub error: String,
@@ -259,7 +310,7 @@ fn error_body(code: &str, message: &str) -> ErrorBody {
 }
 
 /// Request body for `POST /nodes`.
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, utoipa::ToSchema)]
 pub struct CreateNodeRequest {
     /// Optional existing node to connect to after creation.
     pub connect_to: Option<u64>,
@@ -268,14 +319,15 @@ pub struct CreateNodeRequest {
 }
 
 /// Request body for `POST /nodes/:id/state`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct SetNodeStateRequest {
     /// Target lifecycle state (e.g. `Stem`, `Apoptosis`).
+    #[schema(value_type = String, example = "Apoptosis")]
     pub state: kce_core::types::NodeState,
 }
 
 /// Request body for `POST /pheromone/deposit`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct DepositRequest {
     /// Source node id.
     pub from: u64,
@@ -286,28 +338,28 @@ pub struct DepositRequest {
 }
 
 /// Response of `POST /nodes`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct CreateNodeResponse {
     /// New node id (>= 10_000).
     pub id: u64,
 }
 
 /// Response of `POST /pheromone/deposit`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct DepositResponse {
     /// Resulting pheromone level.
     pub level: f64,
 }
 
 /// Request body for `POST /ais/probe`.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct AisProbeRequest {
     /// Vector to evaluate (expected 128 dimensions).
     pub vector: Vec<f64>,
 }
 
 /// Response of `POST /ais/probe`.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct AisProbeResponse {
     /// Whether an anomaly was detected.
     pub is_anomaly: bool,
@@ -326,6 +378,19 @@ pub struct AisProbeResponse {
 /// - Timeout enforcement via `tokio::time::timeout`.
 /// - Pipeline execution in `spawn_blocking` to avoid blocking the async runtime.
 /// - Real metrics update on success / failure.
+#[utoipa::path(
+    post,
+    path = "/query",
+    request_body = QueryBody,
+    responses(
+        (status = 200, description = "Execute query against engine pipeline", body = QueryResponseBody),
+        (status = 400, description = "Validation or tenant error", body = ErrorBody),
+        (status = 429, description = "Rate limit or backpressure exceeded", body = ErrorBody)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[tracing::instrument(skip(state, headers, body), fields(top_k = body.top_k))]
 async fn query_handler(
     State(state): State<Arc<AppState>>,
@@ -467,6 +532,13 @@ async fn query_handler(
 /// Server-sent events stream of [`EngineEvent`]s.
 ///
 /// Send `data: {"type":"...", ...}` frames; keep-alive every 15s.
+#[utoipa::path(
+    get,
+    path = "/events",
+    responses(
+        (status = 200, description = "SSE event stream", content_type = "text/event-stream")
+    )
+)]
 async fn events_handler(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
@@ -481,6 +553,13 @@ async fn events_handler(
 }
 
 /// Full semantic graph: nodes, edges, pheromone levels.
+#[utoipa::path(
+    get,
+    path = "/graph",
+    responses(
+        (status = 200, description = "Graph topology and pheromone levels", body = GraphResponse)
+    )
+)]
 async fn graph_handler(State(state): State<Arc<AppState>>) -> (StatusCode, Json<GraphResponse>) {
     let pipeline = &state.pipeline;
     let nodes = pipeline
@@ -520,6 +599,16 @@ async fn graph_handler(State(state): State<Arc<AppState>>) -> (StatusCode, Json<
 }
 
 /// Create a node (optionally connected to an existing one).
+#[utoipa::path(
+    post,
+    path = "/nodes",
+    request_body = CreateNodeRequest,
+    responses(
+        (status = 201, description = "Node created", body = CreateNodeResponse),
+        (status = 400, description = "Validation error", body = ErrorBody),
+        (status = 404, description = "Connect target not found", body = ErrorBody)
+    )
+)]
 async fn create_node_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CreateNodeRequest>,
@@ -560,6 +649,17 @@ async fn create_node_handler(
 }
 
 /// Remove a node from the graph.
+#[utoipa::path(
+    delete,
+    path = "/nodes/{id}",
+    params(
+        ("id" = u64, Path, description = "Node ID")
+    ),
+    responses(
+        (status = 204, description = "Node deleted"),
+        (status = 404, description = "Node not found", body = ErrorBody)
+    )
+)]
 async fn delete_node_handler(
     State(state): State<Arc<AppState>>,
     axum::extract::Path(id): axum::extract::Path<u64>,
@@ -578,6 +678,18 @@ async fn delete_node_handler(
 }
 
 /// Set a node's lifecycle state.
+#[utoipa::path(
+    post,
+    path = "/nodes/{id}/state",
+    params(
+        ("id" = u64, Path, description = "Node ID")
+    ),
+    request_body = SetNodeStateRequest,
+    responses(
+        (status = 200, description = "State updated"),
+        (status = 404, description = "Node not found", body = ErrorBody)
+    )
+)]
 async fn set_node_state_handler(
     State(state): State<Arc<AppState>>,
     axum::extract::Path(id): axum::extract::Path<u64>,
@@ -593,6 +705,15 @@ async fn set_node_state_handler(
 }
 
 /// Deposit pheromone on an edge.
+#[utoipa::path(
+    post,
+    path = "/pheromone/deposit",
+    request_body = DepositRequest,
+    responses(
+        (status = 200, description = "Pheromone deposited", body = DepositResponse),
+        (status = 400, description = "Validation error", body = ErrorBody)
+    )
+)]
 async fn deposit_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<DepositRequest>,
@@ -627,6 +748,15 @@ async fn deposit_handler(
 }
 
 /// AIS probe handler.
+#[utoipa::path(
+    post,
+    path = "/ais/probe",
+    request_body = AisProbeRequest,
+    responses(
+        (status = 200, description = "AIS probe result", body = AisProbeResponse),
+        (status = 400, description = "Validation or dimension error", body = ErrorBody)
+    )
+)]
 async fn ais_probe_handler(
     State(state): State<Arc<AppState>>,
     Json(req): Json<AisProbeRequest>,
@@ -665,6 +795,13 @@ async fn ais_probe_handler(
 /// GET /health handler (FT-012: smart healthcheck).
 ///
 /// Actually checks WAL and DB status rather than returning hardcoded values.
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "Engine health report")
+    )
+)]
 async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     // Storage check: verify if we can perform a dummy read/write
     let mut storage_ok = false;
@@ -715,6 +852,13 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
 }
 
 /// GET /metrics handler (FT-007: real metrics in Prometheus format).
+#[utoipa::path(
+    get,
+    path = "/metrics",
+    responses(
+        (status = 200, description = "Prometheus text metrics", content_type = "text/plain")
+    )
+)]
 async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let latency = state.metric_query_latency_ms.load(Ordering::Relaxed);
     let hits = state.metric_retrieval_hits.load(Ordering::Relaxed);
@@ -809,6 +953,14 @@ async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoRespons
 /// POST /encode handler (FT-006).
 ///
 /// Encodes ECMA nodes into an mRNA instruction using MCE.
+#[utoipa::path(
+    post,
+    path = "/encode",
+    request_body = EncodeBody,
+    responses(
+        (status = 200, description = "Encode ECMA nodes into mRNA instruction")
+    )
+)]
 async fn encode_handler(
     State(state): State<Arc<AppState>>,
     Json(body): Json<EncodeBody>,
@@ -837,6 +989,14 @@ async fn encode_handler(
 /// POST /action handler (FT-006).
 ///
 /// Executes an mRNA instruction with TTL enforcement.
+#[utoipa::path(
+    post,
+    path = "/action",
+    request_body = ActionBody,
+    responses(
+        (status = 200, description = "Execute mRNA instruction")
+    )
+)]
 async fn action_handler(
     State(state): State<Arc<AppState>>,
     Json(body): Json<ActionBody>,
@@ -1428,5 +1588,41 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn openapi_json_and_docs_are_served() {
+        let state = test_state();
+        let app = build_router(state);
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/openapi.json")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(v["openapi"], "3.0.3");
+        assert!(v["paths"]["/graph"].is_object());
+        assert!(v["paths"]["/query"].is_object());
+        assert!(v["paths"]["/nodes"].is_object());
+        assert!(v["paths"]["/ais/probe"].is_object());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/docs/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }
