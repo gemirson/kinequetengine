@@ -124,6 +124,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .merge(post_routes)
         .route("/health", get(health_handler))
         .route("/events", get(events_handler))
+        .route("/graph", get(graph_handler))
         .route("/metrics", get(metrics_handler))
         .with_state(state)
 }
@@ -193,6 +194,45 @@ pub struct EncodeBody {
 pub struct ActionBody {
     pub mrna: Mrna,
     pub created_at_ms: u64,
+}
+
+/// A graph node as exposed by `GET /graph`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GraphNodeDto {
+    /// Node id.
+    pub id: u64,
+    /// ECMA lifecycle state.
+    pub state: kce_core::types::NodeState,
+    /// Usage counter.
+    pub usage_count: u64,
+    /// Entropy in 0..=1.
+    pub entropy: f64,
+    /// Number of graph connections.
+    pub connections: u64,
+    /// Maturity in 0..=1.
+    pub maturity: f64,
+}
+
+/// A graph edge as exposed by `GET /graph`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GraphEdgeDto {
+    /// Source node id.
+    pub from: u64,
+    /// Target node id.
+    pub to: u64,
+    /// Edge weight in 0..=1.
+    pub weight: f64,
+}
+
+/// Response of `GET /graph`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GraphResponse {
+    /// Registered ECMA nodes.
+    pub nodes: Vec<GraphNodeDto>,
+    /// Unique undirected edges.
+    pub edges: Vec<GraphEdgeDto>,
+    /// Pheromone levels keyed by `"<from>_<to>"`.
+    pub pheromone: std::collections::HashMap<String, f64>,
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -356,6 +396,45 @@ async fn events_handler(
             .map(|json| Ok(Event::default().data(json)))
     });
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+/// Full semantic graph: nodes, edges, pheromone levels.
+async fn graph_handler(State(state): State<Arc<AppState>>) -> (StatusCode, Json<GraphResponse>) {
+    let pipeline = &state.pipeline;
+    let nodes = pipeline
+        .list_nodes()
+        .into_iter()
+        .map(|n| GraphNodeDto {
+            id: n.id,
+            state: n.state,
+            usage_count: n.usage_count,
+            entropy: n.entropy,
+            connections: n.connections as u64,
+            maturity: n.maturity,
+        })
+        .collect();
+    let edges = pipeline
+        .graph_edges()
+        .into_iter()
+        .map(|e| GraphEdgeDto {
+            from: e.from,
+            to: e.to,
+            weight: e.weight,
+        })
+        .collect();
+    let mut pheromone = std::collections::HashMap::new();
+    for ((from, to), level) in pipeline.pheromone_levels() {
+        pheromone.insert(format!("{from}_{to}"), level);
+        pheromone.insert(format!("{to}_{from}"), level);
+    }
+    (
+        StatusCode::OK,
+        Json(GraphResponse {
+            nodes,
+            edges,
+            pheromone,
+        }),
+    )
 }
 
 /// GET /health handler (FT-012: smart healthcheck).
@@ -811,5 +890,46 @@ mod tests {
             .to_string();
         assert!(content_type.starts_with("text/event-stream"));
         // Intentionally do NOT collect the body: the stream stays open.
+    }
+
+    #[tokio::test]
+    async fn graph_returns_nodes_and_edges() {
+        let state = test_state();
+        {
+            let pipeline = &state.pipeline;
+            pipeline.upsert_node(kce_core::types::EcmaNode {
+                id: 1,
+                state: kce_core::types::NodeState::Stem,
+                usage_count: 1,
+                entropy: 1.0,
+                connections: 0,
+                maturity: 0.0,
+            });
+            pipeline.upsert_node(kce_core::types::EcmaNode {
+                id: 2,
+                state: kce_core::types::NodeState::Progenitor,
+                usage_count: 3,
+                entropy: 0.5,
+                connections: 1,
+                maturity: 0.4,
+            });
+            pipeline.connect(1, 2, 0.5);
+        }
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .uri("/graph")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(v["nodes"].as_array().unwrap().len(), 2);
+        assert_eq!(v["edges"].as_array().unwrap().len(), 1);
+        assert_eq!(v["nodes"][0]["id"], 1);
+        assert!(v["pheromone"].is_object());
     }
 }
