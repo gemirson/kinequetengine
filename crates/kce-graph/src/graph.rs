@@ -134,6 +134,32 @@ impl SemanticGraph {
         self.adjacency.values().map(|v| v.len()).sum()
     }
 
+    /// List all unique undirected edges (`from < to`, deduplicated).
+    ///
+    /// Deterministic order (sorted by `from`, then `to`).
+    pub fn edges(&self) -> Vec<Edge> {
+        let mut seen: BTreeSet<(u64, u64)> = BTreeSet::new();
+        let mut out = Vec::new();
+        for (&from, neighbors) in &self.adjacency {
+            for &(to, weight) in neighbors {
+                if from < to && seen.insert((from, to)) {
+                    out.push(Edge { from, to, weight });
+                }
+            }
+        }
+        out
+    }
+
+    /// Remove a node and every edge that references it.
+    ///
+    /// Idempotent: unknown ids are ignored.
+    pub fn remove_node(&mut self, id: u64) {
+        self.adjacency.remove(&id);
+        for neighbors in self.adjacency.values_mut() {
+            neighbors.retain(|(n, _)| *n != id);
+        }
+    }
+
     /// Add a directed edge (internal helper).
     fn add_directed(&mut self, from: u64, to: u64, weight: f64) {
         let neighbors = self.adjacency.entry(from).or_default();
@@ -274,5 +300,48 @@ mod tests {
         assert!(result.nodes.contains(&10));
         assert!(result.nodes.contains(&2));
         assert!(result.nodes.contains(&20));
+    }
+
+    #[test]
+    fn edges_deduplicates_bidirectional() {
+        let mut g = SemanticGraph::new();
+        g.add_edge(1, 2, 0.5);
+        g.add_edge(2, 1, 0.5); // duplicate, other direction
+        let e = g.edges();
+        assert_eq!(e.len(), 1);
+        assert_eq!(e[0].from, 1);
+        assert_eq!(e[0].to, 2);
+        assert_eq!(e[0].weight, 0.5);
+    }
+
+    #[test]
+    fn edges_sorted_deterministic() {
+        let mut g = SemanticGraph::new();
+        g.add_edge(5, 6, 0.1);
+        g.add_edge(1, 2, 0.9);
+        let e = g.edges();
+        assert_eq!(e.len(), 2);
+        assert_eq!((e[0].from, e[0].to), (1, 2));
+        assert_eq!((e[1].from, e[1].to), (5, 6));
+    }
+
+    #[test]
+    fn remove_node_clears_all_references() {
+        let mut g = SemanticGraph::new();
+        g.add_edge(1, 2, 0.5);
+        g.add_edge(2, 3, 0.5);
+        g.remove_node(2);
+        assert!(g.neighbors(1).is_empty());
+        assert!(g.neighbors(3).is_empty());
+        assert_eq!(g.node_count(), 2);
+        assert_eq!(g.edge_count(), 0);
+    }
+
+    #[test]
+    fn remove_node_unknown_is_noop() {
+        let mut g = SemanticGraph::new();
+        g.add_edge(1, 2, 0.5);
+        g.remove_node(99);
+        assert_eq!(g.node_count(), 2);
     }
 }
