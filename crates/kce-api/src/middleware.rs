@@ -20,7 +20,7 @@ pub async fn auth_middleware(
     next: Next,
 ) -> impl IntoResponse {
     let path = request.uri().path();
-    if path == "/health" {
+    if path == "/health" || path == "/openapi.json" || path.starts_with("/docs") {
         return next.run(request).await;
     }
 

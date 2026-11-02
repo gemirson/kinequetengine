@@ -124,6 +124,41 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+/// Build the CORS layer from `KCE_CORS_ORIGINS` (comma-separated origins).
+///
+/// Defaults to `http://localhost:3000`. Applied in kce-server as the
+/// **outermost** layer so preflight is answered before auth.
+pub fn cors_layer() -> tower_http::cors::CorsLayer {
+    use std::time::Duration;
+    use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+
+    let origins =
+        std::env::var("KCE_CORS_ORIGINS").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let allow_origin = AllowOrigin::list(
+        origins
+            .split(',')
+            .filter_map(|s| axum::http::HeaderValue::from_str(s.trim()).ok())
+            .collect::<Vec<_>>(),
+    );
+    CorsLayer::new()
+        .allow_origin(allow_origin)
+        .allow_methods(AllowMethods::from(vec![
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::DELETE,
+            axum::http::Method::OPTIONS,
+        ]))
+        .allow_headers(AllowHeaders::from(vec![
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::ACCEPT,
+            axum::http::header::AUTHORIZATION,
+            axum::http::HeaderName::from_static("x-api-key"),
+            axum::http::HeaderName::from_static("x-tenant-id"),
+            axum::http::HeaderName::from_static("x-request-id"),
+        ]))
+        .max_age(Duration::from_secs(3600))
+}
+
 // ── Request / Response types ─────────────────────────────────────────────────
 
 /// Request body for POST /query.
@@ -682,6 +717,55 @@ mod tests {
         if let crate::events::EngineEvent::QueryCompleted { latency_ms, action } = ev {
             assert!(latency_ms >= 0.0);
             assert!(!action.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn cors_allows_configured_origin_preflight() {
+        std::env::set_var("KCE_CORS_ORIGINS", "http://localhost:3000");
+        let state = test_state();
+        let app = build_router(state)
+            .layer(axum::middleware::from_fn(
+                crate::middleware::request_id_middleware,
+            ))
+            .layer(cors_layer());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("OPTIONS")
+                    .uri("/query")
+                    .header("origin", "http://localhost:3000")
+                    .header("access-control-request-method", "POST")
+                    .header("access-control-request-headers", "content-type,x-api-key")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let allow_origin = response
+            .headers()
+            .get("access-control-allow-origin")
+            .expect("allow-origin header")
+            .to_str()
+            .unwrap()
+            .to_string();
+        assert_eq!(allow_origin, "http://localhost:3000");
+        std::env::remove_var("KCE_CORS_ORIGINS");
+    }
+
+    #[tokio::test]
+    async fn openapi_and_docs_skip_auth() {
+        let state = test_state();
+        for uri in ["/health", "/openapi.json", "/docs"] {
+            let app = build_router(state.clone()).layer(axum::middleware::from_fn(
+                crate::middleware::auth_middleware,
+            ));
+            let response = app
+                .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_ne!(response.status(), StatusCode::UNAUTHORIZED, "uri {uri}");
         }
     }
 }

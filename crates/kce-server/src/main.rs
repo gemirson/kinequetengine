@@ -2,9 +2,11 @@
 //!
 //! Features: distributed sharding, swarm gossip, consensus, and hematoencephalic gateway.
 
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
 use axum::middleware as axum_middleware;
 use kce_api::middleware::{auth_middleware, request_id_middleware};
-use kce_api::routes::{build_router, AppState, TenantRateLimiter};
+use kce_api::routes::{build_router, cors_layer, AppState, TenantRateLimiter};
 use kce_core::traits::StorageBackend;
 use kce_gateway::{start_websocket_server, KceGatewayService};
 use kce_mce::engine::MceEngine;
@@ -157,7 +159,9 @@ async fn main() {
 
     let app = build_router(state.clone())
         .layer(axum_middleware::from_fn(request_id_middleware))
-        .layer(axum_middleware::from_fn(auth_middleware));
+        .layer(axum_middleware::from_fn(auth_middleware))
+        // CORS outermost: preflight must bypass auth.
+        .layer(cors_layer());
 
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
