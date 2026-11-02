@@ -9,7 +9,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -118,6 +118,9 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/query", post(query_handler))
         .route("/encode", post(encode_handler))
         .route("/action", post(action_handler))
+        .route("/nodes", post(create_node_handler))
+        .route("/nodes/:id/state", post(set_node_state_handler))
+        .route("/pheromone/deposit", post(deposit_handler))
         .layer(RequestBodyLimitLayer::new(MAX_BODY_SIZE));
 
     Router::new()
@@ -125,6 +128,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/health", get(health_handler))
         .route("/events", get(events_handler))
         .route("/graph", get(graph_handler))
+        .route("/nodes/:id", delete(delete_node_handler))
         .route("/metrics", get(metrics_handler))
         .with_state(state)
 }
@@ -233,6 +237,63 @@ pub struct GraphResponse {
     pub edges: Vec<GraphEdgeDto>,
     /// Pheromone levels keyed by `"<from>_<to>"`.
     pub pheromone: std::collections::HashMap<String, f64>,
+}
+
+/// Uniform error body used by non-Json-pipeline handlers.
+#[derive(Debug, Serialize)]
+pub struct ErrorBody {
+    /// Machine-readable code.
+    pub error: String,
+    /// Human-readable message.
+    pub message: String,
+}
+
+fn error_body(code: &str, message: &str) -> ErrorBody {
+    ErrorBody {
+        error: code.to_string(),
+        message: message.to_string(),
+    }
+}
+
+/// Request body for `POST /nodes`.
+#[derive(Debug, Deserialize, Default)]
+pub struct CreateNodeRequest {
+    /// Optional existing node to connect to after creation.
+    pub connect_to: Option<u64>,
+    /// Edge weight in 0..=1 (defaults to 0.5) when `connect_to` is set.
+    pub weight: Option<f64>,
+}
+
+/// Request body for `POST /nodes/:id/state`.
+#[derive(Debug, Deserialize)]
+pub struct SetNodeStateRequest {
+    /// Target lifecycle state (e.g. `Stem`, `Apoptosis`).
+    pub state: kce_core::types::NodeState,
+}
+
+/// Request body for `POST /pheromone/deposit`.
+#[derive(Debug, Deserialize)]
+pub struct DepositRequest {
+    /// Source node id.
+    pub from: u64,
+    /// Target node id.
+    pub to: u64,
+    /// Deposit amount (must be finite and > 0).
+    pub amount: f64,
+}
+
+/// Response of `POST /nodes`.
+#[derive(Debug, Serialize)]
+pub struct CreateNodeResponse {
+    /// New node id (>= 10_000).
+    pub id: u64,
+}
+
+/// Response of `POST /pheromone/deposit`.
+#[derive(Debug, Serialize)]
+pub struct DepositResponse {
+    /// Resulting pheromone level.
+    pub level: f64,
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -435,6 +496,113 @@ async fn graph_handler(State(state): State<Arc<AppState>>) -> (StatusCode, Json<
             pheromone,
         }),
     )
+}
+
+/// Create a node (optionally connected to an existing one).
+async fn create_node_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CreateNodeRequest>,
+) -> Result<(StatusCode, Json<CreateNodeResponse>), (StatusCode, Json<ErrorBody>)> {
+    let weight = req.weight.unwrap_or(0.5);
+    if !weight.is_finite() || !(0.0..=1.0).contains(&weight) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(error_body(
+                "VALIDATION_ERROR",
+                "weight must be within 0..=1",
+            )),
+        ));
+    }
+    let id = state.node_seq.fetch_add(1, Ordering::Relaxed);
+    let pipeline = &state.pipeline;
+    pipeline.upsert_node(kce_core::types::EcmaNode {
+        id,
+        state: kce_core::types::NodeState::Stem,
+        usage_count: 1,
+        entropy: 1.0,
+        connections: 0,
+        maturity: 0.0,
+    });
+    if let Some(target) = req.connect_to {
+        if !pipeline.connect(id, target, weight) {
+            pipeline.remove_node(id);
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(error_body("NOT_FOUND", "connect_to node not found")),
+            ));
+        }
+    }
+    let _ = state
+        .events
+        .send(crate::events::EngineEvent::NodeCreated { id });
+    Ok((StatusCode::CREATED, Json(CreateNodeResponse { id })))
+}
+
+/// Remove a node from the graph.
+async fn delete_node_handler(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<u64>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorBody>)> {
+    if state.pipeline.remove_node(id) {
+        let _ = state
+            .events
+            .send(crate::events::EngineEvent::NodeRemoved { id });
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err((
+            StatusCode::NOT_FOUND,
+            Json(error_body("NOT_FOUND", "node not found")),
+        ))
+    }
+}
+
+/// Set a node's lifecycle state.
+async fn set_node_state_handler(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(id): axum::extract::Path<u64>,
+    Json(req): Json<SetNodeStateRequest>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorBody>)> {
+    match state.pipeline.set_node_state(id, req.state) {
+        Some(_) => Ok(StatusCode::OK),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(error_body("NOT_FOUND", "node not found")),
+        )),
+    }
+}
+
+/// Deposit pheromone on an edge.
+async fn deposit_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<DepositRequest>,
+) -> Result<(StatusCode, Json<DepositResponse>), (StatusCode, Json<ErrorBody>)> {
+    if !req.amount.is_finite() || req.amount <= 0.0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(error_body(
+                "VALIDATION_ERROR",
+                "amount must be finite and > 0",
+            )),
+        ));
+    }
+    state
+        .pipeline
+        .pheromone_map
+        .write()
+        .deposit(req.from, req.to, req.amount);
+    let level = state
+        .pipeline
+        .pheromone_map
+        .read()
+        .peek_fractional(req.from, req.to, 0);
+    let _ = state
+        .events
+        .send(crate::events::EngineEvent::PheromoneDeposited {
+            from: req.from,
+            to: req.to,
+            level,
+        });
+    Ok((StatusCode::OK, Json(DepositResponse { level })))
 }
 
 /// GET /health handler (FT-012: smart healthcheck).
@@ -931,5 +1099,192 @@ mod tests {
         assert_eq!(v["edges"].as_array().unwrap().len(), 1);
         assert_eq!(v["nodes"][0]["id"], 1);
         assert!(v["pheromone"].is_object());
+    }
+
+    #[tokio::test]
+    async fn create_node_returns_201_and_emits_event() {
+        let state = test_state();
+        let mut rx = state.events.subscribe();
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "connect_to": null, "weight": null }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let id = v["id"].as_u64().unwrap();
+        assert!(id >= 10_000);
+        let ev = tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv())
+            .await
+            .expect("timeout")
+            .expect("open");
+        assert!(matches!(ev, crate::events::EngineEvent::NodeCreated { id: e_id } if e_id == id));
+    }
+
+    #[tokio::test]
+    async fn create_node_with_connect_validates() {
+        let state = test_state();
+        // unknown connect_to -> 404
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "connect_to": 999999 }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        // out-of-range weight -> 400
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::json!({ "weight": 2.0 }).to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn delete_node_lifecycle() {
+        let state = test_state();
+        // create first
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes")
+                    .header("content-type", "application/json")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let id = v["id"].as_u64().unwrap();
+
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/nodes/{id}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/nodes/{id}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn set_state_and_deposit() {
+        let state = test_state();
+        // seed a node
+        state.pipeline.upsert_node(kce_core::types::EcmaNode {
+            id: 5,
+            state: kce_core::types::NodeState::Stem,
+            usage_count: 1,
+            entropy: 1.0,
+            connections: 0,
+            maturity: 0.0,
+        });
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes/5/state")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "state": "Apoptosis" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // invalid state string -> client error (422 in axum 0.7 Json rejection)
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/nodes/5/state")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "state": "Nope" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(response.status().is_client_error());
+
+        // deposit amount <= 0 -> 400
+        let response = build_router(state.clone())
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/pheromone/deposit")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "from": 5, "to": 6, "amount": -1.0 }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        // valid deposit -> 200 with level
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/pheromone/deposit")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "from": 5, "to": 6, "amount": 0.5 }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(v["level"].as_f64().unwrap() > 0.0);
     }
 }
