@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 kce-core = { workspace = true }
+kce-ais = { workspace = true }
 kce-api = { workspace = true }
 kce-mce = { workspace = true }
 kce-pipeline = { workspace = true }

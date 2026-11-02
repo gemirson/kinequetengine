@@ -7,6 +7,7 @@ description = "Axum HTTP API layer for the KineContext Engine"
 
 [dependencies]
 kce-core = { workspace = true }
+kce-ais = { workspace = true }
 kce-mce = { workspace = true }
 kce-pipeline = { workspace = true }
 axum = { workspace = true }

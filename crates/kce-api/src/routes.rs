@@ -102,6 +102,8 @@ pub struct AppState {
     pub events: crate::events::EngineEventTx,
     /// Monotonic node id generator (first id: 10_000).
     pub node_seq: AtomicU64,
+    /// Immune anomaly detector (`POST /ais/probe`).
+    pub ais: Mutex<kce_ais::detection::ImmuneDetector>,
 }
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -121,6 +123,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/nodes", post(create_node_handler))
         .route("/nodes/:id/state", post(set_node_state_handler))
         .route("/pheromone/deposit", post(deposit_handler))
+        .route("/ais/probe", post(ais_probe_handler))
         .layer(RequestBodyLimitLayer::new(MAX_BODY_SIZE));
 
     Router::new()
@@ -294,6 +297,24 @@ pub struct CreateNodeResponse {
 pub struct DepositResponse {
     /// Resulting pheromone level.
     pub level: f64,
+}
+
+/// Request body for `POST /ais/probe`.
+#[derive(Debug, Deserialize)]
+pub struct AisProbeRequest {
+    /// Vector to evaluate (expected 128 dimensions).
+    pub vector: Vec<f64>,
+}
+
+/// Response of `POST /ais/probe`.
+#[derive(Debug, Serialize)]
+pub struct AisProbeResponse {
+    /// Whether an anomaly was detected.
+    pub is_anomaly: bool,
+    /// Normalized anomaly score in 0..=1.
+    pub score: f64,
+    /// Anomaly threshold.
+    pub threshold: f64,
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -605,6 +626,42 @@ async fn deposit_handler(
     Ok((StatusCode::OK, Json(DepositResponse { level })))
 }
 
+/// AIS probe handler.
+async fn ais_probe_handler(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<AisProbeRequest>,
+) -> Result<(StatusCode, Json<AisProbeResponse>), (StatusCode, Json<ErrorBody>)> {
+    if req.vector.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(error_body("VALIDATION_ERROR", "vector cannot be empty")),
+        ));
+    }
+    let mut detector = state.ais.lock();
+    match detector.detect(&req.vector) {
+        Ok(result) => {
+            if result.is_anomaly {
+                let _ = state.events.send(crate::events::EngineEvent::AisAnomaly {
+                    score: result.score,
+                    blocked: true,
+                });
+            }
+            Ok((
+                StatusCode::OK,
+                Json(AisProbeResponse {
+                    is_anomaly: result.is_anomaly,
+                    score: result.score,
+                    threshold: result.threshold,
+                }),
+            ))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(error_body("DIMENSION_MISMATCH", &e.to_string())),
+        )),
+    }
+}
+
 /// GET /health handler (FT-012: smart healthcheck).
 ///
 /// Actually checks WAL and DB status rather than returning hardcoded values.
@@ -821,6 +878,13 @@ mod tests {
         let mut dataset = Dataset::new(128);
         let _ = dataset.push(1, vec![1.0; 128]);
         let pipeline = PipelineOrchestrator::new(PipelineConfig::default(), dataset);
+        let mut ais_detector =
+            kce_ais::detection::ImmuneDetector::new(kce_ais::detection::DetectorConfig {
+                threshold: 0.7,
+                warmup_count: 0,
+                window_size: 1000,
+            });
+        ais_detector.add_pattern(vec![0.0; 128]);
         Arc::new(AppState {
             pipeline: Arc::new(pipeline),
             mce: MceEngine::with_defaults(),
@@ -833,6 +897,7 @@ mod tests {
             metric_total_count: AtomicU64::new(0),
             events: tokio::sync::broadcast::channel(crate::events::EVENT_CHANNEL_CAPACITY).0,
             node_seq: AtomicU64::new(10_000),
+            ais: Mutex::new(ais_detector),
         })
     }
 
@@ -1286,5 +1351,82 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert!(v["level"].as_f64().unwrap() > 0.0);
+    }
+
+    #[tokio::test]
+    async fn ais_probe_normal_vector() {
+        let state = test_state();
+        let body = serde_json::json!({
+            "vector": vec![0.001; 128]
+        });
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/ais/probe")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(v["is_anomaly"], false);
+        assert!(v["score"].as_f64().unwrap() < 0.7);
+    }
+
+    #[tokio::test]
+    async fn ais_probe_anomaly_emits_event() {
+        let state = test_state();
+        let mut rx = state.events.subscribe();
+        let body = serde_json::json!({
+            "vector": vec![3.0; 128]
+        });
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/ais/probe")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(v["is_anomaly"], true);
+        assert!(v["score"].as_f64().unwrap() >= 0.7);
+
+        let ev = tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv())
+            .await
+            .expect("timeout")
+            .expect("open");
+        assert!(
+            matches!(ev, crate::events::EngineEvent::AisAnomaly { score, blocked } if blocked && score >= 0.7)
+        );
+    }
+
+    #[tokio::test]
+    async fn ais_probe_invalid_dimension() {
+        let state = test_state();
+        let body = serde_json::json!({
+            "vector": vec![1.0; 10]
+        });
+        let response = build_router(state)
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/ais/probe")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

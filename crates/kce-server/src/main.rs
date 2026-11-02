@@ -143,6 +143,14 @@ async fn main() {
     });
 
     // 5. Build Axum API
+    let mut ais_detector =
+        kce_ais::detection::ImmuneDetector::new(kce_ais::detection::DetectorConfig {
+            threshold: 0.7,
+            warmup_count: 0,
+            window_size: 1000,
+        });
+    ais_detector.add_pattern(vec![0.0; 128]);
+
     let state = Arc::new(AppState {
         pipeline: Arc::clone(&pipeline),
         mce: MceEngine::with_defaults(),
@@ -155,6 +163,7 @@ async fn main() {
         metric_total_count: AtomicU64::new(0),
         events: tokio::sync::broadcast::channel(kce_api::events::EVENT_CHANNEL_CAPACITY).0,
         node_seq: AtomicU64::new(10_000),
+        ais: parking_lot::Mutex::new(ais_detector),
     });
 
     let app = build_router(state.clone())
